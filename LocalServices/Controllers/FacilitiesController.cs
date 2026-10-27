@@ -1,4 +1,3 @@
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LocalServices.Models;
@@ -19,7 +18,10 @@ public class FacilitiesController : Controller
     // GET: FACILITYS
     public async Task<IActionResult> Index()    
     {
-        return View(await _context.Facilities.ToListAsync());
+        return View(await _context.Facilities
+            .Include(f => f.Category)
+            .Include(f => f.Services)
+            .ToListAsync());
     }
 
     // GET: FACILITYS/Details/5
@@ -31,6 +33,8 @@ public class FacilitiesController : Controller
         }
 
         var facility = await _context.Facilities
+            .Include(f => f.Category)
+            .Include(f => f.Services)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (facility == null)
         {
@@ -41,10 +45,15 @@ public class FacilitiesController : Controller
     }
 
     // GET: FACILITYS/Create
-    public IActionResult Create()
+    public IActionResult Create(int? categoryId)
     {
-        ViewData["CategoryList"] = new SelectList(_context.Categories, "Id", "Name");
-        return View();
+        ViewData["CategoryList"] = new SelectList(_context.Categories, "Id", "Name", categoryId);
+        var facility = new Facility();
+        if (categoryId.HasValue)
+        {
+            facility.CategoryId = categoryId.Value;
+        }
+        return View(facility);
     }
 
     // POST: FACILITYS/Create
@@ -52,11 +61,11 @@ public class FacilitiesController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Name,ImagePath,CategoryId,Category,Services")] Facility facility)
+    public async Task<IActionResult> Create([Bind("Id,Name,City,Street,ImagePath,ImageFile,CategoryId")] Facility facility)
     {
         if (ModelState.IsValid)
         {
-            if(facility.ImageFile != null)
+            if (facility.ImageFile != null)
             {
                 string wwwRootPath = _hostEnvironment.WebRootPath;
                 string fileName = Guid.NewGuid().ToString() + Path.GetExtension(facility.ImageFile.FileName);
@@ -72,7 +81,7 @@ public class FacilitiesController : Controller
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
-        ViewData["CategoryList"] = new SelectList(_context.Categories, "Id", "Name");
+        ViewData["CategoryList"] = new SelectList(_context.Categories, "Id", "Name", facility.CategoryId);
         return View(facility);
     }
 
@@ -84,11 +93,14 @@ public class FacilitiesController : Controller
             return NotFound();
         }
 
-        var facility = await _context.Facilities.FindAsync(id);
+        var facility = await _context.Facilities
+            .Include(f => f.Category)
+            .FirstOrDefaultAsync(f => f.Id == id);
         if (facility == null)
         {
             return NotFound();
         }
+        ViewData["CategoryList"] = new SelectList(_context.Categories, "Id", "Name", facility.CategoryId);
         return View(facility);
     }
 
@@ -97,7 +109,7 @@ public class FacilitiesController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,ImagePath,CategoryId,Category,Services")] Facility facility)
+    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,City,Street,ImagePath,ImageFile,CategoryId")] Facility facility)
     {
         if (id != facility.Id)
         {
@@ -108,6 +120,19 @@ public class FacilitiesController : Controller
         {
             try
             {
+                if (facility.ImageFile != null)
+                {
+                    string wwwRootPath = _hostEnvironment.WebRootPath;
+                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(facility.ImageFile.FileName);
+                    string path = Path.Combine(wwwRootPath + "/images/", fileName);
+                    Directory.CreateDirectory(Path.Combine(wwwRootPath, "images"));
+                    using (var fileStream = new FileStream(path, FileMode.Create))
+                    {
+                        await facility.ImageFile.CopyToAsync(fileStream);
+                    }
+                    facility.ImagePath = "/images/" + fileName;
+                }
+
                 _context.Update(facility);
                 await _context.SaveChangesAsync();
             }
@@ -124,6 +149,7 @@ public class FacilitiesController : Controller
             }
             return RedirectToAction(nameof(Index));
         }
+        ViewData["CategoryList"] = new SelectList(_context.Categories, "Id", "Name", facility.CategoryId);
         return View(facility);
     }
 
@@ -136,6 +162,8 @@ public class FacilitiesController : Controller
         }
 
         var facility = await _context.Facilities
+            .Include(f => f.Category)
+            .Include(f => f.Services)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (facility == null)
         {
@@ -165,3 +193,4 @@ public class FacilitiesController : Controller
         return _context.Facilities.Any(e => e.Id == id);
     }
 }
+

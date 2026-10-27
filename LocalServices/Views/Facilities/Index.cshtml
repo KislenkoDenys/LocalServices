@@ -1,13 +1,13 @@
 @model IEnumerable<LocalServices.Models.Facility>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Заклади";
 }
 
-<h1>Index</h1>
+<h1>Заклади</h1>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create">Створити новий</a>
 </p>
 <table class="table">
     <thead>
@@ -19,13 +19,10 @@
                 @Html.DisplayNameFor(model => model.ImagePath)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.CategoryId)
+                Адреса
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Category)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Services)
             </th>
             <th></th>
         </tr>
@@ -37,21 +34,32 @@
                 @Html.DisplayFor(model => item.Name)
             </td>
             <td>
-                @Html.DisplayFor(model => item.ImagePath)
+                @if (!string.IsNullOrEmpty(item.ImagePath))
+                {
+                    <img src="@item.ImagePath" alt="@item.Name" style="max-height: 50px; max-width: 80px; object-fit: cover;" />
+                }
+                else
+                {
+                    <span>Немає фото</span>
+                }
             </td>
             <td>
-                @Html.DisplayFor(model => item.CategoryId)
+                @if (!string.IsNullOrWhiteSpace(item.City) || !string.IsNullOrWhiteSpace(item.Street))
+                {
+                    @string.Join(", ", new[] { item.City, item.Street }.Where(s => !string.IsNullOrWhiteSpace(s)))
+                }
+                else
+                {
+                    <span>—</span>
+                }
             </td>
             <td>
-                @Html.DisplayFor(model => item.Category)
+                @item.Category?.Name
             </td>
             <td>
-                @Html.DisplayFor(model => item.Services)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                <a asp-action="Edit" asp-route-id="@item.Id">Редагувати</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">Деталі</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Видалити</a>
             </td>
         </tr>
 }

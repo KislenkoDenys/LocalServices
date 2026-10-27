@@ -1,4 +1,3 @@
-
 using LocalServices.Data;
 using LocalServices.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +16,9 @@ public class ServicesController : Controller
     // GET: SERVICES
     public async Task<IActionResult> Index()    
     {
-        return View(await _context.Services.ToListAsync());
+        return View(await _context.Services
+            .Include(s => s.Facility)
+            .ToListAsync());
     }
 
     // GET: SERVICES/Details/5
@@ -29,6 +30,7 @@ public class ServicesController : Controller
         }
 
         var service = await _context.Services
+            .Include(s => s.Facility)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (service == null)
         {
@@ -50,7 +52,7 @@ public class ServicesController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Name,Price,FacilityId,Facility")] Service service)
+    public async Task<IActionResult> Create([Bind("Id,Name,Price,FacilityId")] Service service)
     {
         if (ModelState.IsValid)
         {
@@ -58,7 +60,7 @@ public class ServicesController : Controller
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
-        ViewData["FacilityList"] = new SelectList(_context.Facilities, "Id", "Name");
+        ViewData["FacilityList"] = new SelectList(_context.Facilities, "Id", "Name", service.FacilityId);
         return View(service);
     }
 
@@ -75,6 +77,7 @@ public class ServicesController : Controller
         {
             return NotFound();
         }
+        ViewData["FacilityList"] = new SelectList(_context.Facilities, "Id", "Name", service.FacilityId);
         return View(service);
     }
 
@@ -83,7 +86,7 @@ public class ServicesController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,Price,FacilityId,Facility")] Service service)
+    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,Price,FacilityId")] Service service)
     {
         if (id != service.Id)
         {
@@ -110,6 +113,7 @@ public class ServicesController : Controller
             }
             return RedirectToAction(nameof(Index));
         }
+        ViewData["FacilityList"] = new SelectList(_context.Facilities, "Id", "Name", service.FacilityId);
         return View(service);
     }
 
@@ -122,6 +126,7 @@ public class ServicesController : Controller
         }
 
         var service = await _context.Services
+            .Include(s => s.Facility)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (service == null)
         {

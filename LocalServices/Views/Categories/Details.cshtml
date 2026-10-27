@@ -1,31 +1,48 @@
 @model LocalServices.Models.Category
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Деталі";
 }
 
-<h1>Details</h1>
+<h1>Деталі</h1>
 
 <div>
-    <h4>Category</h4>
+    <h4>Категорія</h4>
     <hr />
     <dl class="row">
-        <dt class = "col-sm-2">
+        <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Name)
         </dt>
-        <dd class = "col-sm-10">
+        <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Name)
         </dd>
-    </dl>
-        <dt class = "col-sm-2">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Description)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Description)
+        </dd>
+        <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Facilities)
         </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Facilities)
+        <dd class="col-sm-10">
+            @if (Model.Facilities != null && Model.Facilities.Any())
+            {
+                <ul>
+                    @foreach (var facility in Model.Facilities)
+                    {
+                        <li>
+                            <a asp-controller="Facilities" asp-action="Details" asp-route-id="@facility.Id">@facility.Name</a>
+                        </li>
+                    }
+                </ul>
+            }
         </dd>
     </dl>
 </div>
 <div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+    <a asp-action="Edit" asp-route-id="@Model?.Id">Редагувати</a> |
+    <a asp-action="Index">Назад до списку</a>
+</div>
+
 </div>

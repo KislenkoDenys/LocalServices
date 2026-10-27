@@ -1,13 +1,13 @@
 @model IEnumerable<LocalServices.Models.Service>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Послуги";
 }
 
-<h1>Index</h1>
+<h1>Послуги</h1>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create">Створити нову</a>
 </p>
 <table class="table">
     <thead>
@@ -17,9 +17,6 @@
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Price)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.FacilityId)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Facility)
@@ -34,18 +31,15 @@
                 @Html.DisplayFor(model => item.Name)
             </td>
             <td>
-                @Html.DisplayFor(model => item.Price)
+                @item.Price.ToString("C")
             </td>
             <td>
-                @Html.DisplayFor(model => item.FacilityId)
+                @item.Facility?.Name
             </td>
             <td>
-                @Html.DisplayFor(model => item.Facility)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                <a asp-action="Edit" asp-route-id="@item.Id">Редагувати</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">Деталі</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Видалити</a>
             </td>
         </tr>
 }

@@ -1,4 +1,3 @@
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LocalServices.Models;
@@ -16,7 +15,9 @@ public class CategoriesController : Controller
     // GET: CATEGORYS
     public async Task<IActionResult> Index()    
     {
-        return View(await _context.Categories.ToListAsync());
+        return View(await _context.Categories
+            .Include(c => c.Facilities)
+            .ToListAsync());
     }
 
     // GET: CATEGORYS/Details/5
@@ -28,6 +29,7 @@ public class CategoriesController : Controller
         }
 
         var category = await _context.Categories
+            .Include(c => c.Facilities)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (category == null)
         {
@@ -48,7 +50,7 @@ public class CategoriesController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Name,Facilities")] Category category)
+    public async Task<IActionResult> Create([Bind("Id,Name,Description")] Category category)
     {
         if (ModelState.IsValid)
         {
@@ -67,7 +69,9 @@ public class CategoriesController : Controller
             return NotFound();
         }
 
-        var category = await _context.Categories.FindAsync(id);
+        var category = await _context.Categories
+            .Include(c => c.Facilities)
+            .FirstOrDefaultAsync(c => c.Id == id);
         if (category == null)
         {
             return NotFound();
@@ -80,7 +84,7 @@ public class CategoriesController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,Facilities")] Category category)
+    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,Description")] Category category)
     {
         if (id != category.Id)
         {
@@ -119,6 +123,7 @@ public class CategoriesController : Controller
         }
 
         var category = await _context.Categories
+            .Include(c => c.Facilities)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (category == null)
         {
