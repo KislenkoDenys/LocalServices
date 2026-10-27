@@ -4,10 +4,12 @@ using LocalServices.Models;
 using LocalServices.Data;
 
 [Route("api/[controller]")]
+[Route("api/services")]
 [ApiController]
 public class ServicesApiController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+
     public ServicesApiController(ApplicationDbContext context)
     {
         _context = context;
@@ -15,16 +17,20 @@ public class ServicesApiController : ControllerBase
 
     // GET: api/Service
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Service>>> GetService()
+    public async Task<ActionResult<IEnumerable<Service>>> GetServices()
     {
-        return await _context.Services.ToListAsync();
+        return await _context.Services
+            .Include(s => s.Facility)
+            .ToListAsync();
     }
 
     // GET: api/Service/5
     [HttpGet("{id}")]
     public async Task<ActionResult<Service>> GetService(int id)
     {
-        var service = await _context.Services.FindAsync(id);
+        var service = await _context.Services
+            .Include(s => s.Facility)
+            .FirstOrDefaultAsync(s => s.Id == id);
 
         if (service == null)
         {
@@ -37,11 +43,11 @@ public class ServicesApiController : ControllerBase
     // PUT: api/Service/5
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutService(int? id, Service service)
+    public async Task<IActionResult> PutService(int id, Service service)
     {
         if (id != service.Id)
         {
-            return BadRequest();
+            return BadRequest("ID у URL не відповідає ID об'єкта.");
         }
 
         _context.Entry(service).State = EntityState.Modified;
@@ -73,12 +79,12 @@ public class ServicesApiController : ControllerBase
         _context.Services.Add(service);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction("GetService", new { id = service.Id }, service);
+        return CreatedAtAction(nameof(GetService), new { id = service.Id }, service);
     }
 
     // DELETE: api/Service/5
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteService(int? id)
+    public async Task<IActionResult> DeleteService(int id)
     {
         var service = await _context.Services.FindAsync(id);
         if (service == null)
@@ -92,7 +98,7 @@ public class ServicesApiController : ControllerBase
         return NoContent();
     }
 
-    private bool ServiceExists(int? id)
+    private bool ServiceExists(int id)
     {
         return _context.Services.Any(e => e.Id == id);
     }

@@ -4,10 +4,12 @@ using LocalServices.Models;
 using LocalServices.Data;
 
 [Route("api/[controller]")]
+[Route("api/facilities")]
 [ApiController]
 public class FacilitiesApiController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+
     public FacilitiesApiController(ApplicationDbContext context)
     {
         _context = context;
@@ -15,16 +17,22 @@ public class FacilitiesApiController : ControllerBase
 
     // GET: api/Facility
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Facility>>> GetFacility()
+    public async Task<ActionResult<IEnumerable<Facility>>> GetFacilities()
     {
-        return await _context.Facilities.ToListAsync();
+        return await _context.Facilities
+            .Include(f => f.Category)
+            .Include(f => f.Services)
+            .ToListAsync();
     }
 
     // GET: api/Facility/5
     [HttpGet("{id}")]
     public async Task<ActionResult<Facility>> GetFacility(int id)
     {
-        var facility = await _context.Facilities.FindAsync(id);
+        var facility = await _context.Facilities
+            .Include(f => f.Category)
+            .Include(f => f.Services)
+            .FirstOrDefaultAsync(f => f.Id == id);
 
         if (facility == null)
         {
@@ -37,11 +45,11 @@ public class FacilitiesApiController : ControllerBase
     // PUT: api/Facility/5
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutFacility(int? id, Facility facility)
+    public async Task<IActionResult> PutFacility(int id, Facility facility)
     {
         if (id != facility.Id)
         {
-            return BadRequest();
+            return BadRequest("ID у URL не відповідає ID об'єкта.");
         }
 
         _context.Entry(facility).State = EntityState.Modified;
@@ -73,12 +81,12 @@ public class FacilitiesApiController : ControllerBase
         _context.Facilities.Add(facility);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction("GetFacility", new { id = facility.Id }, facility);
+        return CreatedAtAction(nameof(GetFacility), new { id = facility.Id }, facility);
     }
 
     // DELETE: api/Facility/5
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteFacility(int? id)
+    public async Task<IActionResult> DeleteFacility(int id)
     {
         var facility = await _context.Facilities.FindAsync(id);
         if (facility == null)
@@ -92,7 +100,7 @@ public class FacilitiesApiController : ControllerBase
         return NoContent();
     }
 
-    private bool FacilityExists(int? id)
+    private bool FacilityExists(int id)
     {
         return _context.Facilities.Any(e => e.Id == id);
     }

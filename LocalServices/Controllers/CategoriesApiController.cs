@@ -4,10 +4,12 @@ using LocalServices.Models;
 using LocalServices.Data;
 
 [Route("api/[controller]")]
+[Route("api/categories")]
 [ApiController]
 public class CategoriesApiController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+
     public CategoriesApiController(ApplicationDbContext context)
     {
         _context = context;
@@ -15,16 +17,20 @@ public class CategoriesApiController : ControllerBase
 
     // GET: api/Category
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Category>>> GetCategory()
+    public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
     {
-        return await _context.Categories.ToListAsync();
+        return await _context.Categories
+            .Include(c => c.Facilities)
+            .ToListAsync();
     }
 
     // GET: api/Category/5
     [HttpGet("{id}")]
     public async Task<ActionResult<Category>> GetCategory(int id)
     {
-        var category = await _context.Categories.FindAsync(id);
+        var category = await _context.Categories
+            .Include(c => c.Facilities)
+            .FirstOrDefaultAsync(c => c.Id == id);
 
         if (category == null)
         {
@@ -37,11 +43,11 @@ public class CategoriesApiController : ControllerBase
     // PUT: api/Category/5
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutCategory(int? id, Category category)
+    public async Task<IActionResult> PutCategory(int id, Category category)
     {
         if (id != category.Id)
         {
-            return BadRequest();
+            return BadRequest("ID у URL не відповідає ID об'єкта.");
         }
 
         _context.Entry(category).State = EntityState.Modified;
@@ -73,12 +79,12 @@ public class CategoriesApiController : ControllerBase
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction("GetCategory", new { id = category.Id }, category);
+        return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category);
     }
 
     // DELETE: api/Category/5
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteCategory(int? id)
+    public async Task<IActionResult> DeleteCategory(int id)
     {
         var category = await _context.Categories.FindAsync(id);
         if (category == null)
@@ -92,7 +98,7 @@ public class CategoriesApiController : ControllerBase
         return NoContent();
     }
 
-    private bool CategoryExists(int? id)
+    private bool CategoryExists(int id)
     {
         return _context.Categories.Any(e => e.Id == id);
     }
