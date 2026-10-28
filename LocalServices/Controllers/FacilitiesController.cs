@@ -67,10 +67,11 @@ public class FacilitiesController : Controller
         {
             if (facility.ImageFile != null)
             {
-                string wwwRootPath = _hostEnvironment.WebRootPath;
+                string wwwRootPath = _hostEnvironment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
                 string fileName = Guid.NewGuid().ToString() + Path.GetExtension(facility.ImageFile.FileName);
-                string path = Path.Combine(wwwRootPath + "/images/", fileName);
-                Directory.CreateDirectory(Path.Combine(wwwRootPath, "images"));
+                string imagesFolder = Path.Combine(wwwRootPath, "images");
+                Directory.CreateDirectory(imagesFolder);
+                string path = Path.Combine(imagesFolder, fileName);
                 using (var fileStream = new FileStream(path, FileMode.Create))
                 {
                     await facility.ImageFile.CopyToAsync(fileStream);
@@ -122,10 +123,11 @@ public class FacilitiesController : Controller
             {
                 if (facility.ImageFile != null)
                 {
-                    string wwwRootPath = _hostEnvironment.WebRootPath;
+                    string wwwRootPath = _hostEnvironment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
                     string fileName = Guid.NewGuid().ToString() + Path.GetExtension(facility.ImageFile.FileName);
-                    string path = Path.Combine(wwwRootPath + "/images/", fileName);
-                    Directory.CreateDirectory(Path.Combine(wwwRootPath, "images"));
+                    string imagesFolder = Path.Combine(wwwRootPath, "images");
+                    Directory.CreateDirectory(imagesFolder);
+                    string path = Path.Combine(imagesFolder, fileName);
                     using (var fileStream = new FileStream(path, FileMode.Create))
                     {
                         await facility.ImageFile.CopyToAsync(fileStream);

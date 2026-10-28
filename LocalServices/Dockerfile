@@ -7,6 +7,7 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
+RUN mkdir -p /app/wwwroot/images && chown -R $APP_UID:$APP_UID /app
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
@@ -26,5 +27,6 @@ RUN dotnet publish "./LocalServices.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=publish --chown=$APP_UID:$APP_UID /app/publish .
+USER $APP_UID
 ENTRYPOINT ["dotnet", "LocalServices.dll"]

@@ -20,6 +20,36 @@ builder.Services.AddControllersWithViews()
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        int retries = 5;
+        while (retries > 0)
+        {
+            try
+            {
+                context.Database.Migrate();
+                logger.LogInformation("Міграції бази даних успішно застосовано.");
+                break;
+            }
+            catch (Exception ex) when (retries > 1)
+            {
+                retries--;
+                logger.LogWarning(ex, "Очікування підключення до PostgreSQL... Залишилося спроб: {Retries}", retries);
+                Thread.Sleep(3000);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Помилка при застосуванні міграцій бази даних.");
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -33,6 +63,7 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthorization();
