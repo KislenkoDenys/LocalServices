@@ -6,6 +6,31 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+connectionString = connectionString.Replace("\r", "").Replace("\n", "").Trim();
+
+if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) || connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+{
+    var uri = new Uri(connectionString);
+    var userInfo = uri.UserInfo.Split(':');
+    var username = Uri.UnescapeDataString(userInfo[0]);
+    var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+    var port = uri.Port > 0 ? uri.Port : 5432;
+    var database = uri.AbsolutePath.TrimStart('/');
+    connectionString = $"Host={uri.Host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Prefer;Trust Server Certificate=true;Gss Enc Mode=Disable;";
+}
+else
+{
+    connectionString = connectionString.Replace(",", ";");
+    if (!connectionString.Contains("Gss Enc Mode", StringComparison.OrdinalIgnoreCase))
+    {
+        connectionString += ";Gss Enc Mode=Disable;";
+    }
+    if (!connectionString.Contains("Trust Server Certificate", StringComparison.OrdinalIgnoreCase))
+    {
+        connectionString += ";Trust Server Certificate=true;";
+    }
+}
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
