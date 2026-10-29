@@ -95,16 +95,23 @@
             <section class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-body p-4">
                     <h2 class="h4 card-title fw-bold text-dark mb-3">Інформація про заклад</h2>
-                    @if (!string.IsNullOrWhiteSpace(Model.Description))
-                    {
-                        <p class="card-text text-secondary" style="white-space: pre-line;">
-                            @Model.Description
-                        </p>
-                    }
-                    else
-                    {
-                        <p class="text-muted fst-italic mb-0">Опис закладу наразі не вказано.</p>
-                    }
+                    <p class="card-text text-secondary leading-relaxed">
+                        @if (!string.IsNullOrWhiteSpace(Model.Description))
+                        {
+                            <span style="white-space: pre-line;">@Model.Description</span>
+                        }
+                        else
+                        {
+                            <span>
+                                Заклад <strong>@Model.Name</strong> — це сучасний @categoryName у місті @cityName, 
+                                розташований за адресою @fullAddress. Тут пропонують якісний сервіс та широкий асортимент послуг 
+                                для мешканців і гостей міста.
+                            </span>
+                        }
+                    </p>
+                    <p class="text-secondary small mb-0">
+                        Щоб дізнатися більше про заклад @Model.Name або уточнити деталі, звертайтеся за контактами на сторінці.
+                    </p>
                 </div>
             </section>
 

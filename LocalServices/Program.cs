@@ -83,6 +83,21 @@ else
     app.UseHsts();
 }
 
+app.Use(async (context, next) =>
+{
+    var host = context.Request.Host.Host;
+    if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+    {
+        var newHost = host.Substring(4);
+        var port = context.Request.Host.Port.HasValue ? $":{context.Request.Host.Port}" : "";
+        var newUrl = $"{context.Request.Scheme}://{newHost}{port}{context.Request.PathBase}{context.Request.Path}{context.Request.QueryString}";
+        context.Response.StatusCode = StatusCodes.Status301MovedPermanently;
+        context.Response.Headers.Location = newUrl;
+        return;
+    }
+    await next();
+});
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
