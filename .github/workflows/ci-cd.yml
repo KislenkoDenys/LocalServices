@@ -28,6 +28,9 @@ jobs:
     - name: Build solution
       run: dotnet build --no-restore --configuration Release
 
+    - name: Run unit tests
+      run: dotnet test --no-restore --verbosity normal
+
   deploy:
     name: Deploy to Cloud (Render)
     needs: build-and-verify
