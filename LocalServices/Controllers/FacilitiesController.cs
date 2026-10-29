@@ -67,16 +67,12 @@ public class FacilitiesController : Controller
         {
             if (facility.ImageFile != null)
             {
-                string wwwRootPath = _hostEnvironment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-                string fileName = Guid.NewGuid().ToString() + Path.GetExtension(facility.ImageFile.FileName);
-                string imagesFolder = Path.Combine(wwwRootPath, "images");
-                Directory.CreateDirectory(imagesFolder);
-                string path = Path.Combine(imagesFolder, fileName);
-                using (var fileStream = new FileStream(path, FileMode.Create))
+                using (var memoryStream = new MemoryStream())
                 {
-                    await facility.ImageFile.CopyToAsync(fileStream);
+                    await facility.ImageFile.CopyToAsync(memoryStream);
+                    var bytes = memoryStream.ToArray();
+                    facility.ImagePath = $"data:{facility.ImageFile.ContentType};base64,{Convert.ToBase64String(bytes)}";
                 }
-                facility.ImagePath = "/images/" + fileName;
             }
             _context.Add(facility);
             await _context.SaveChangesAsync();
@@ -123,16 +119,12 @@ public class FacilitiesController : Controller
             {
                 if (facility.ImageFile != null)
                 {
-                    string wwwRootPath = _hostEnvironment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(facility.ImageFile.FileName);
-                    string imagesFolder = Path.Combine(wwwRootPath, "images");
-                    Directory.CreateDirectory(imagesFolder);
-                    string path = Path.Combine(imagesFolder, fileName);
-                    using (var fileStream = new FileStream(path, FileMode.Create))
+                    using (var memoryStream = new MemoryStream())
                     {
-                        await facility.ImageFile.CopyToAsync(fileStream);
+                        await facility.ImageFile.CopyToAsync(memoryStream);
+                        var bytes = memoryStream.ToArray();
+                        facility.ImagePath = $"data:{facility.ImageFile.ContentType};base64,{Convert.ToBase64String(bytes)}";
                     }
-                    facility.ImagePath = "/images/" + fileName;
                 }
 
                 _context.Update(facility);
