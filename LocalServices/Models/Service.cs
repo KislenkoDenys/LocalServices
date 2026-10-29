@@ -12,6 +12,7 @@ namespace LocalServices.Models
         [Display(Name = "Ціна")]
         public decimal Price { get; set; }
 
+        [Display(Name = "Заклад")]
         public int FacilityId { get; set; }
 
         [Display(Name = "Заклад")]

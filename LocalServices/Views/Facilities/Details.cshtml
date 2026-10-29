@@ -1,73 +1,168 @@
 @model LocalServices.Models.Facility
 
 @{
-    ViewData["Title"] = "Деталі";
+    ViewData["Title"] = Model.Name;
 }
 
-<h1>Деталі</h1>
+<style>
+    html {
+        scroll-behavior: smooth;
+    }
+    .sticky-contact-box {
+        position: sticky;
+        top: 80px;
+    }
+    .facility-hero-img {
+        max-height: 380px;
+        width: 100%;
+        object-fit: cover;
+        border-radius: 0.75rem;
+    }
+</style>
 
-<div>
-    <h4>Заклад</h4>
-    <hr />
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.City)
-        </dt>
-        <dd class="col-sm-10">
-            @(string.IsNullOrWhiteSpace(Model.City) ? "—" : Model.City)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Street)
-        </dt>
-        <dd class="col-sm-10">
-            @(string.IsNullOrWhiteSpace(Model.Street) ? "—" : Model.Street)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.ImagePath)
-        </dt>
-        <dd class="col-sm-10">
+<div class="container py-3">
+    <!-- Заголовок сторінки -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between border-bottom pb-3 mb-4">
+        <div>
+            <h1 class="h2 fw-bold text-dark mb-1">@Model.Name</h1>
+            <span class="badge bg-primary fs-6 px-3 py-1 rounded-pill">
+                @(Model.Category?.Name ?? "Заклад")
+            </span>
+        </div>
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm me-1">Редагувати</a>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">До списку</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Ліва колонка: Фото, Опис та Послуги зі скролом -->
+        <div class="col-lg-8">
+            
+            <!-- Фото закладу -->
             @if (!string.IsNullOrEmpty(Model.ImagePath))
             {
-                <img src="@Model.ImagePath" alt="@Model.Name" style="max-height: 200px; max-width: 300px; object-fit: cover;" />
+                <div class="mb-4">
+                    <img src="@Model.ImagePath" alt="@Model.Name" class="facility-hero-img shadow-sm" />
+                </div>
             }
-            else
-            {
-                <span>Немає фото</span>
-            }
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Category)
-        </dt>
-        <dd class="col-sm-10">
-            @Model.Category?.Name
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Services)
-        </dt>
-        <dd class="col-sm-10">
-            @if (Model.Services != null && Model.Services.Any())
-            {
-                <ul>
-                    @foreach (var service in Model.Services)
+
+            <!-- Опис закладу -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold text-dark mb-3">Інформація про заклад</h4>
+                    @if (!string.IsNullOrWhiteSpace(Model.Description))
                     {
-                        <li>@service.Name - @service.Price.ToString("C")</li>
+                        <p class="card-text text-secondary" style="white-space: pre-line;">
+                            @Model.Description
+                        </p>
                     }
-                </ul>
-            }
-            else
-            {
-                <span>Немає послуг</span>
-            }
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Редагувати</a> |
-    <a asp-action="Index">Назад до списку</a>
+                    else
+                    {
+                        <p class="text-muted fst-italic mb-0">Опис закладу наразі не вказано.</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Послуги та ціни -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="card-title fw-bold text-dark mb-0">Послуги та ціни</h4>
+                        <span class="badge bg-secondary rounded-pill">
+                            Кількість: @(Model.Services?.Count ?? 0)
+                        </span>
+                    </div>
+
+                    @if (Model.Services != null && Model.Services.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Назва послуги</th>
+                                        <th scope="col" class="text-end">Ціна</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var service in Model.Services)
+                                    {
+                                        <tr>
+                                            <td class="fw-medium text-dark">@service.Name</td>
+                                            <td class="text-end fw-bold text-success fs-5">
+                                                @service.Price.ToString("N2") ₴
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted fst-italic mb-0">Послуги для цього закладу ще не додані.</p>
+                    }
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Права колонка: Контакти, що постійно залишаються на екрані при scroll (STICKY) -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-3 sticky-contact-box bg-light">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Контакти</h5>
+
+                    <!-- Телефон -->
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold text-uppercase">Номер телефону</label>
+                        <div class="fs-5 fw-bold text-dark">
+                            @(string.IsNullOrWhiteSpace(Model.Phone) ? "Не вказано" : Model.Phone)
+                        </div>
+                    </div>
+
+                    <!-- Графік роботи -->
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold text-uppercase">Години роботи</label>
+                        <div class="text-dark">
+                            @(string.IsNullOrWhiteSpace(Model.WorkingHours) ? "Не вказано" : Model.WorkingHours)
+                        </div>
+                    </div>
+
+                    <!-- Адреса -->
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold text-uppercase">Місто</label>
+                        <div class="text-dark">
+                            @(string.IsNullOrWhiteSpace(Model.City) ? "Не вказано" : Model.City)
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold text-uppercase">Вулиця та номер</label>
+                        <div class="text-dark">
+                            @(string.IsNullOrWhiteSpace(Model.Street) ? "Не вказано" : Model.Street)
+                        </div>
+                    </div>
+
+                    <!-- Категорія -->
+                    <div class="mb-4">
+                        <label class="text-muted small fw-bold text-uppercase">Категорія</label>
+                        <div class="text-dark">
+                            @(Model.Category?.Name ?? "Не вказано")
+                        </div>
+                    </div>
+
+                    <!-- Кнопки керування -->
+                    <div class="d-grid gap-2">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                            Редагувати заклад
+                        </a>
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            Назад до списку
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

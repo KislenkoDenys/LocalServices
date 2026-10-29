@@ -17,6 +17,15 @@ namespace LocalServices.Models
         [Display(Name = "Вулиця та номер будинку")]
         public string? Street { get; set; }
 
+        [Display(Name = "Опис")]
+        public string? Description { get; set; }
+
+        [Display(Name = "Телефон")]
+        public string? Phone { get; set; }
+
+        [Display(Name = "Години роботи")]
+        public string? WorkingHours { get; set; }
+
         [Display(Name = "Зображення")]
         public string? ImagePath { get; set; }
 
@@ -25,6 +34,7 @@ namespace LocalServices.Models
         [Display(Name = "Файл зображення")]
         public IFormFile? ImageFile { get; set; }
 
+        [Display(Name = "Категорія")]
         public int CategoryId { get; set; }
 
         [Display(Name = "Категорія")]

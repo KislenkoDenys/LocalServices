@@ -45,6 +45,9 @@ public class ModelTests
         Assert.Equal(string.Empty, facility.Name);
         Assert.Null(facility.City);
         Assert.Null(facility.Street);
+        Assert.Null(facility.Description);
+        Assert.Null(facility.Phone);
+        Assert.Null(facility.WorkingHours);
         Assert.Null(facility.ImagePath);
         Assert.Null(facility.ImageFile);
         Assert.Equal(0, facility.CategoryId);
@@ -64,6 +67,9 @@ public class ModelTests
             Name = "Спортлайф",
             City = "Київ",
             Street = "вул. Перемоги, 10",
+            Description = "Тестовий опис",
+            Phone = "+380501112233",
+            WorkingHours = "09:00 - 21:00",
             ImagePath = "data:image/png;base64,abc",
             CategoryId = 10,
             Category = category,
@@ -74,6 +80,9 @@ public class ModelTests
         Assert.Equal("Спортлайф", facility.Name);
         Assert.Equal("Київ", facility.City);
         Assert.Equal("вул. Перемоги, 10", facility.Street);
+        Assert.Equal("Тестовий опис", facility.Description);
+        Assert.Equal("+380501112233", facility.Phone);
+        Assert.Equal("09:00 - 21:00", facility.WorkingHours);
         Assert.Equal("data:image/png;base64,abc", facility.ImagePath);
         Assert.Equal(10, facility.CategoryId);
         Assert.Same(category, facility.Category);

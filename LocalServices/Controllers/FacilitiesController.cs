@@ -61,7 +61,7 @@ public class FacilitiesController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Name,City,Street,ImagePath,ImageFile,CategoryId")] Facility facility)
+    public async Task<IActionResult> Create([Bind("Id,Name,City,Street,Description,Phone,WorkingHours,ImagePath,ImageFile,CategoryId")] Facility facility)
     {
         if (ModelState.IsValid)
         {
@@ -106,7 +106,7 @@ public class FacilitiesController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,City,Street,ImagePath,ImageFile,CategoryId")] Facility facility)
+    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,City,Street,Description,Phone,WorkingHours,ImagePath,ImageFile,CategoryId")] Facility facility)
     {
         if (id != facility.Id)
         {

@@ -31,6 +31,7 @@ public class ServicesController : Controller
 
         var service = await _context.Services
             .Include(s => s.Facility)
+                .ThenInclude(f => f!.Category)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (service == null)
         {
@@ -127,6 +128,7 @@ public class ServicesController : Controller
 
         var service = await _context.Services
             .Include(s => s.Facility)
+                .ThenInclude(f => f!.Category)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (service == null)
         {

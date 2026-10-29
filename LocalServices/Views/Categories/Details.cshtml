@@ -1,48 +1,174 @@
 @model LocalServices.Models.Category
 
 @{
-    ViewData["Title"] = "Деталі";
+    ViewData["Title"] = $"Категорія: {Model.Name}";
 }
 
-<h1>Деталі</h1>
+<style>
+    html {
+        scroll-behavior: smooth;
+    }
+    .sticky-info-box {
+        position: sticky;
+        top: 80px;
+    }
+    .facility-preview-img {
+        width: 90px;
+        height: 90px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+    }
+    .facility-preview-placeholder {
+        width: 90px;
+        height: 90px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #e9ecef;
+        border-radius: 0.5rem;
+        color: #6c757d;
+        font-size: 1.5rem;
+    }
+</style>
 
-<div>
-    <h4>Категорія</h4>
-    <hr />
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Facilities)
-        </dt>
-        <dd class="col-sm-10">
-            @if (Model.Facilities != null && Model.Facilities.Any())
-            {
-                <ul>
-                    @foreach (var facility in Model.Facilities)
+<div class="container py-3">
+    <!-- Заголовок сторінки -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between border-bottom pb-3 mb-4">
+        <div>
+            <h1 class="h2 fw-bold text-dark mb-1">@Model.Name</h1>
+            <span class="badge bg-primary fs-6 px-3 py-1 rounded-pill">
+                Категорія закладів
+            </span>
+        </div>
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm me-1">Редагувати</a>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">До списку категорій</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Ліва колонка: Опис категорії та список закладів зі скролом -->
+        <div class="col-lg-8">
+            
+            <!-- Опис категорії -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold text-dark mb-3">Опис категорії</h4>
+                    @if (!string.IsNullOrWhiteSpace(Model.Description))
                     {
-                        <li>
-                            <a asp-controller="Facilities" asp-action="Details" asp-route-id="@facility.Id">@facility.Name</a>
-                        </li>
+                        <p class="card-text text-secondary" style="white-space: pre-line;">
+                            @Model.Description
+                        </p>
                     }
-                </ul>
-            }
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Редагувати</a> |
-    <a asp-action="Index">Назад до списку</a>
-</div>
+                    else
+                    {
+                        <p class="text-muted fst-italic mb-0">Опис для цієї категорії поки не додано.</p>
+                    }
+                </div>
+            </div>
 
+            <!-- Список закладів у цій категорії -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="card-title fw-bold text-dark mb-0">Заклади в цій категорії</h4>
+                        <span class="badge bg-secondary rounded-pill">
+                            Усього: @(Model.Facilities?.Count ?? 0)
+                        </span>
+                    </div>
+
+                    @if (Model.Facilities != null && Model.Facilities.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var facility in Model.Facilities)
+                            {
+                                var addr = string.Join(", ", new[] { facility.City, facility.Street }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                                <div class="list-group-item list-group-item-action p-3 rounded-3 mb-2 border">
+                                    <div class="d-flex align-items-center">
+                                        @if (!string.IsNullOrEmpty(facility.ImagePath))
+                                        {
+                                            <img src="@facility.ImagePath" alt="@facility.Name" class="facility-preview-img me-3 flex-shrink-0" />
+                                        }
+                                        else
+                                        {
+                                            <div class="facility-preview-placeholder me-3 flex-shrink-0">
+                                                🏢
+                                            </div>
+                                        }
+                                        <div class="flex-grow-1 min-w-0">
+                                            <h5 class="fw-bold mb-1 text-dark">@facility.Name</h5>
+                                            <div class="small text-muted mb-1">
+                                                @(string.IsNullOrWhiteSpace(addr) ? "Адреса не вказана" : addr)
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(facility.Phone))
+                                            {
+                                                <div class="small text-primary">
+                                                    📞 @facility.Phone
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="ms-3 flex-shrink-0">
+                                            <a asp-controller="Facilities" asp-action="Details" asp-route-id="@facility.Id" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                                Деталі →
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-light border rounded-3 mb-0 text-center py-4">
+                            <div class="fs-2 mb-2">📂</div>
+                            <h6 class="fw-bold text-dark">У цій категорії ще немає закладів</h6>
+                            <p class="text-muted small mb-3">Ви можете додати перший заклад просто зараз.</p>
+                            <a asp-controller="Facilities" asp-action="Create" asp-route-categoryId="@Model.Id" class="btn btn-sm btn-primary rounded-pill px-3">
+                                + Додати заклад
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Права колонка: Інформація, що постійно на екрані (STICKY) -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-3 sticky-info-box bg-light">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Інформація</h5>
+
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold text-uppercase">Назва категорії</label>
+                        <div class="fs-5 fw-bold text-dark">@Model.Name</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted small fw-bold text-uppercase">Кількість закладів</label>
+                        <div class="fs-5 fw-bold text-primary">@(Model.Facilities?.Count ?? 0)</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="text-muted small fw-bold text-uppercase">Швидка дія</label>
+                        <div>
+                            <a asp-controller="Facilities" asp-action="Create" asp-route-categoryId="@Model.Id" class="btn btn-primary w-100 mb-2">
+                                + Додати заклад
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки керування -->
+                    <div class="d-grid gap-2">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                            Редагувати категорію
+                        </a>
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            Назад до списку
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

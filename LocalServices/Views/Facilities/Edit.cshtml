@@ -34,6 +34,24 @@
             </div>
 
             <div class="form-group">
+                <label asp-for="Phone" class="control-label"></label>
+                <input asp-for="Phone" class="form-control" />
+                <span asp-validation-for="Phone" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="WorkingHours" class="control-label"></label>
+                <input asp-for="WorkingHours" class="form-control" />
+                <span asp-validation-for="WorkingHours" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Description" class="control-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
                 <label class="control-label">Поточне фото</label>
                 <div>
                     @if (!string.IsNullOrEmpty(Model.ImagePath))
@@ -54,7 +72,7 @@
             </div>
 
             <div class="form-group">
-                <label asp-for="CategoryId" class="control-label"></label>
+                <label asp-for="CategoryId" class="control-label">Категорія</label>
                 <select asp-for="CategoryId" class="form-control" asp-items="ViewBag.CategoryList"></select>
                 <span asp-validation-for="CategoryId" class="text-danger"></span>
             </div>
