@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /Identity/
+Disallow: /api/
+

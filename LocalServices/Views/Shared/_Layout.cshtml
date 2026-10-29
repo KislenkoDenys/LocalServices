@@ -1,9 +1,24 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="uk">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - LocalServices</title>
+    <title>@(ViewData["Title"] != null ? $"{ViewData["Title"]} — LocalServices" : "LocalServices — Каталог локальних послуг")</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    @if (ViewData["MetaDescription"] != null)
+    {
+        <meta name="description" content="@ViewData["MetaDescription"]" />
+    }
+    else
+    {
+        <meta name="description" content="LocalServices — зручний сервіс пошуку локальних закладів та послуг в Україні. Каталог закладів, актуальні ціни, графік роботи та контакти." />
+    }
+    @if (ViewData["CanonicalUrl"] != null)
+    {
+        <link rel="canonical" href="@ViewData["CanonicalUrl"]" />
+    }
+    <meta name="robots" content="index, follow" />
+    @await RenderSectionAsync("MetaTags", required: false)
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />

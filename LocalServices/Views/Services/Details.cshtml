@@ -22,7 +22,6 @@
 </style>
 
 <div class="container py-3">
-    <!-- Заголовок сторінки -->
     <div class="d-flex flex-wrap align-items-center justify-content-between border-bottom pb-3 mb-4">
         <div>
             <h1 class="h2 fw-bold text-dark mb-1">@Model.Name</h1>
@@ -43,11 +42,8 @@
     </div>
 
     <div class="row g-4">
-        <!-- Ліва колонка: Деталі послуги та заклад зі скролом -->
         <div class="col-lg-8">
-            
-            <!-- Картка вартості послуги -->
-            <div class="card border-0 shadow-sm rounded-3 mb-4 bg-primary bg-opacity-10 border-start border-primary border-4">
+            <section class="card border-0 shadow-sm rounded-3 mb-4 bg-primary bg-opacity-10 border-start border-primary border-4">
                 <div class="card-body p-4 d-flex justify-content-between align-items-center">
                     <div>
                         <div class="text-muted small fw-bold text-uppercase mb-1">Вартість послуги</div>
@@ -57,12 +53,11 @@
                         Фіксована ціна
                     </span>
                 </div>
-            </div>
+            </section>
 
-            <!-- Інформація про заклад, що надає послугу -->
-            <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <section class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-body p-4">
-                    <h4 class="card-title fw-bold text-dark mb-3">Заклад, що надає послугу</h4>
+                    <h2 class="h4 card-title fw-bold text-dark mb-3">Заклад, що надає послугу</h2>
 
                     @if (Model.Facility != null)
                     {
@@ -73,7 +68,7 @@
                             </div>
                         }
 
-                        <h5 class="fw-bold text-dark mb-2">@Model.Facility.Name</h5>
+                        <h3 class="h5 fw-bold text-dark mb-2">@Model.Facility.Name</h3>
 
                         @if (!string.IsNullOrWhiteSpace(Model.Facility.Description))
                         {
@@ -110,15 +105,13 @@
                         <p class="text-muted fst-italic mb-0">Заклад не вказано або видалено.</p>
                     }
                 </div>
-            </div>
-
+            </section>
         </div>
 
-        <!-- Права колонка: Контакти та зведена інформація (STICKY) -->
-        <div class="col-lg-4">
+        <aside class="col-lg-4">
             <div class="card border-0 shadow-sm rounded-3 sticky-service-box bg-light">
                 <div class="card-body p-4">
-                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Деталі</h5>
+                    <h3 class="h5 fw-bold text-dark border-bottom pb-2 mb-3">Деталі</h3>
 
                     <div class="mb-3">
                         <label class="text-muted small fw-bold text-uppercase">Назва послуги</label>
@@ -160,7 +153,6 @@
                         </div>
                     </div>
 
-                    <!-- Кнопки дій -->
                     <div class="d-grid gap-2">
                         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
                             Редагувати послугу
@@ -171,6 +163,6 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </aside>
     </div>
 </div>

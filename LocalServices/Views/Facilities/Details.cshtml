@@ -1,7 +1,52 @@
 @model LocalServices.Models.Facility
 
 @{
-    ViewData["Title"] = Model.Name;
+    var cityName = string.IsNullOrWhiteSpace(Model.City) ? "Україна" : Model.City;
+    var categoryName = Model.Category?.Name ?? "Заклад";
+    var pageTitle = $"{Model.Name} — {categoryName} у місті {cityName}";
+    ViewData["Title"] = pageTitle;
+
+    var fullAddress = string.Join(", ", new[] { Model.City, Model.Street }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    if (string.IsNullOrWhiteSpace(fullAddress))
+    {
+        fullAddress = "Адреса уточнюється";
+    }
+
+    var metaDesc = !string.IsNullOrWhiteSpace(Model.Description) && Model.Description.Length >= 40
+        ? (Model.Description.Length > 150 ? Model.Description.Substring(0, 147) + "..." : Model.Description)
+        : $"Заклад {Model.Name} ({categoryName}) у місті {cityName}: адреса {fullAddress}, актуальні послуги, ціни, графік роботи та контакти.";
+    ViewData["MetaDescription"] = metaDesc;
+    ViewData["CanonicalUrl"] = $"https://localservices-ecv8.onrender.com/Facilities/Details/{Model.Id}";
+}
+
+@section MetaTags {
+    <meta property="og:title" content="@pageTitle" />
+    <meta property="og:description" content="@metaDesc" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://localservices-ecv8.onrender.com/Facilities/Details/@Model.Id" />
+    @if (!string.IsNullOrEmpty(Model.ImagePath))
+    {
+        <meta property="og:image" content="@Model.ImagePath" />
+    }
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@pageTitle" />
+    <meta name="twitter:description" content="@metaDesc" />
+
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "LocalBusiness",
+        "name": "@Model.Name",
+        "description": "@(string.IsNullOrWhiteSpace(Model.Description) ? metaDesc : Model.Description.Replace("\"", "\\\"").Replace("\r", "").Replace("\n", " "))",
+        "telephone": "@(string.IsNullOrWhiteSpace(Model.Phone) ? "+380000000000" : Model.Phone)",
+        "openingHours": "@(string.IsNullOrWhiteSpace(Model.WorkingHours) ? "Mo-Su 09:00-21:00" : Model.WorkingHours)",
+        "address": {
+            "@@type": "PostalAddress",
+            "addressLocality": "@cityName",
+            "streetAddress": "@(Model.Street ?? "")"
+        }
+    }
+    </script>
 }
 
 <style>
@@ -21,12 +66,13 @@
 </style>
 
 <div class="container py-3">
-    <!-- Заголовок сторінки -->
     <div class="d-flex flex-wrap align-items-center justify-content-between border-bottom pb-3 mb-4">
         <div>
-            <h1 class="h2 fw-bold text-dark mb-1">@Model.Name</h1>
+            <h1 class="h2 fw-bold text-dark mb-1">
+                @Model.Name — @categoryName у місті @cityName
+            </h1>
             <span class="badge bg-primary fs-6 px-3 py-1 rounded-pill">
-                @(Model.Category?.Name ?? "Заклад")
+                @categoryName
             </span>
         </div>
         <div>
@@ -36,21 +82,19 @@
     </div>
 
     <div class="row g-4">
-        <!-- Ліва колонка: Фото, Опис та Послуги зі скролом -->
         <div class="col-lg-8">
-            
-            <!-- Фото закладу -->
             @if (!string.IsNullOrEmpty(Model.ImagePath))
             {
                 <div class="mb-4">
-                    <img src="@Model.ImagePath" alt="@Model.Name" class="facility-hero-img shadow-sm" />
+                    <img src="@Model.ImagePath" 
+                         alt="Фото закладу @Model.Name, @categoryName у місті @cityName" 
+                         class="facility-hero-img shadow-sm" />
                 </div>
             }
 
-            <!-- Опис закладу -->
-            <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <section class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-body p-4">
-                    <h4 class="card-title fw-bold text-dark mb-3">Інформація про заклад</h4>
+                    <h2 class="h4 card-title fw-bold text-dark mb-3">Інформація про заклад</h2>
                     @if (!string.IsNullOrWhiteSpace(Model.Description))
                     {
                         <p class="card-text text-secondary" style="white-space: pre-line;">
@@ -62,13 +106,12 @@
                         <p class="text-muted fst-italic mb-0">Опис закладу наразі не вказано.</p>
                     }
                 </div>
-            </div>
+            </section>
 
-            <!-- Послуги та ціни -->
-            <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <section class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="card-title fw-bold text-dark mb-0">Послуги та ціни</h4>
+                        <h2 class="h4 card-title fw-bold text-dark mb-0">Послуги та ціни</h2>
                         <span class="badge bg-secondary rounded-pill">
                             Кількість: @(Model.Services?.Count ?? 0)
                         </span>
@@ -103,56 +146,49 @@
                         <p class="text-muted fst-italic mb-0">Послуги для цього закладу ще не додані.</p>
                     }
                 </div>
-            </div>
-
+            </section>
         </div>
 
-        <!-- Права колонка: Контакти, що постійно залишаються на екрані при scroll (STICKY) -->
-        <div class="col-lg-4">
+        <aside class="col-lg-4">
             <div class="card border-0 shadow-sm rounded-3 sticky-contact-box bg-light">
                 <div class="card-body p-4">
-                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Контакти</h5>
+                    <h3 class="h5 fw-bold text-dark border-bottom pb-2 mb-3">Контакти закладу</h3>
 
-                    <!-- Телефон -->
                     <div class="mb-3">
-                        <label class="text-muted small fw-bold text-uppercase">Номер телефону</label>
+                        <span class="text-muted small fw-bold text-uppercase d-block">Номер телефону</span>
                         <div class="fs-5 fw-bold text-dark">
                             @(string.IsNullOrWhiteSpace(Model.Phone) ? "Не вказано" : Model.Phone)
                         </div>
                     </div>
 
-                    <!-- Графік роботи -->
                     <div class="mb-3">
-                        <label class="text-muted small fw-bold text-uppercase">Години роботи</label>
+                        <span class="text-muted small fw-bold text-uppercase d-block">Години роботи</span>
                         <div class="text-dark">
                             @(string.IsNullOrWhiteSpace(Model.WorkingHours) ? "Не вказано" : Model.WorkingHours)
                         </div>
                     </div>
 
-                    <!-- Адреса -->
                     <div class="mb-3">
-                        <label class="text-muted small fw-bold text-uppercase">Місто</label>
+                        <span class="text-muted small fw-bold text-uppercase d-block">Місто</span>
                         <div class="text-dark">
                             @(string.IsNullOrWhiteSpace(Model.City) ? "Не вказано" : Model.City)
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="text-muted small fw-bold text-uppercase">Вулиця та номер</label>
+                        <span class="text-muted small fw-bold text-uppercase d-block">Вулиця та номер</span>
                         <div class="text-dark">
                             @(string.IsNullOrWhiteSpace(Model.Street) ? "Не вказано" : Model.Street)
                         </div>
                     </div>
 
-                    <!-- Категорія -->
                     <div class="mb-4">
-                        <label class="text-muted small fw-bold text-uppercase">Категорія</label>
+                        <span class="text-muted small fw-bold text-uppercase d-block">Категорія</span>
                         <div class="text-dark">
-                            @(Model.Category?.Name ?? "Не вказано")
+                            @categoryName
                         </div>
                     </div>
 
-                    <!-- Кнопки керування -->
                     <div class="d-grid gap-2">
                         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
                             Редагувати заклад
@@ -163,6 +199,6 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </aside>
     </div>
 </div>
