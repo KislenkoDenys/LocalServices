@@ -1,0 +1,49 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-verify:
+    name: Build & Verify (.NET 10)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 10 SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        dotnet-quality: 'preview'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release
+
+  deploy:
+    name: Deploy to Cloud (Render)
+    needs: build-and-verify
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Trigger Render Deployment
+      env:
+        DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      run: |
+        if [ -n "$DEPLOY_HOOK" ]; then
+          echo "Triggering deployment on Render..."
+          curl -f -s -X POST "$DEPLOY_HOOK" > /dev/null
+          echo "Render deployment triggered successfully!"
+        else
+          echo "Render Deploy Hook secret is not set. Render's built-in Git Watcher automatically deploys this commit."
+        fi
+
