@@ -1,0 +1,865 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-4789-abcd-1234567890ab",
+		"name": "LocalServices Web API Tests",
+		"description": "Повний набір автоматичних тестів для REST API проєкту LocalServices (Категорії, Заклади, Послуги). Включає CRUD операції, перевірку HTTP статус-кодів (200, 201, 204, 400, 404), валідацію відповідей та очищення тестових даних.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Категорії (Categories)",
+			"item": [
+				{
+					"name": "1.1 Отримати список категорій (GET 200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Відповідь є валідним JSON-масивом\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an(\"array\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories"
+							]
+						}
+					}
+				},
+				{
+					"name": "1.2 Створити нову категорію (POST 201)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var data = pm.response.json();",
+									"    if (data && data.id) {",
+									"        pm.collectionVariables.set(\"testCategoryId\", data.id);",
+									"        pm.environment.set(\"testCategoryId\", data.id);",
+									"        pm.globals.set(\"testCategoryId\", data.id);",
+									"    }",
+									"}",
+									"",
+									"pm.test(\"Статус відповіді 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Створена категорія має валідний ID та назву\", function () {",
+									"    var data = pm.response.json();",
+									"    pm.expect(data).to.have.property(\"id\");",
+									"    pm.expect(data.id).to.be.above(0);",
+									"    pm.expect(data.name).to.eql(\"Тестова Категорія Postman\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Тестова Категорія Postman\",\n    \"description\": \"Автоматично створено тестовим сценарієм Postman\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories"
+							]
+						}
+					}
+				},
+				{
+					"name": "1.3 Отримати створену категорію за ID (GET 200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Отримано саме створену категорію\", function () {",
+									"    var data = pm.response.json();",
+									"    var expectedId = pm.collectionVariables.get(\"testCategoryId\") || pm.environment.get(\"testCategoryId\") || pm.globals.get(\"testCategoryId\");",
+									"    pm.expect(data.id).to.eql(parseInt(expectedId));",
+									"    pm.expect(data.name).to.eql(\"Тестова Категорія Postman\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/{{testCategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{testCategoryId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "1.4 Оновити категорію (PUT 204)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": {{testCategoryId}},\n    \"name\": \"Оновлена Категорія Postman\",\n    \"description\": \"Опис успішно оновлено через PUT\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/{{testCategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{testCategoryId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "1.5 Негативний тест: неспівпадіння ID в URL та тілі (PUT 400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 400 Bad Request при невідповідності ID\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": 999999,\n    \"name\": \"Спроба з неправильним ID\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/{{testCategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{testCategoryId}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Заклади (Facilities)",
+			"item": [
+				{
+					"name": "2.1 Отримати список закладів (GET 200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Відповідь є масивом закладів\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an(\"array\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/facilities",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"facilities"
+							]
+						}
+					}
+				},
+				{
+					"name": "2.2 Створити заклад для категорії (POST 201)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var data = pm.response.json();",
+									"    if (data && data.id) {",
+									"        pm.collectionVariables.set(\"testFacilityId\", data.id);",
+									"        pm.environment.set(\"testFacilityId\", data.id);",
+									"        pm.globals.set(\"testFacilityId\", data.id);",
+									"    }",
+									"}",
+									"",
+									"pm.test(\"Статус відповіді 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Створений заклад має валідний ID та прив'язаний до категорії\", function () {",
+									"    var data = pm.response.json();",
+									"    var expectedCatId = pm.collectionVariables.get(\"testCategoryId\") || pm.environment.get(\"testCategoryId\") || pm.globals.get(\"testCategoryId\");",
+									"    pm.expect(data).to.have.property(\"id\");",
+									"    pm.expect(data.id).to.be.above(0);",
+									"    pm.expect(data.name).to.eql(\"Тестовий Заклад Postman\");",
+									"    pm.expect(data.categoryId).to.eql(parseInt(expectedCatId));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Тестовий Заклад Postman\",\n    \"city\": \"Київ\",\n    \"street\": \"вул. Хрещатик, 22\",\n    \"categoryId\": {{testCategoryId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/facilities",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"facilities"
+							]
+						}
+					}
+				},
+				{
+					"name": "2.3 Отримати створений заклад за ID (GET 200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Дані закладу співпадають\", function () {",
+									"    var data = pm.response.json();",
+									"    var expectedId = pm.collectionVariables.get(\"testFacilityId\") || pm.environment.get(\"testFacilityId\") || pm.globals.get(\"testFacilityId\");",
+									"    pm.expect(data.id).to.eql(parseInt(expectedId));",
+									"    pm.expect(data.name).to.eql(\"Тестовий Заклад Postman\");",
+									"    pm.expect(data.city).to.eql(\"Київ\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/facilities/{{testFacilityId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"facilities",
+								"{{testFacilityId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "2.4 Оновити дані закладу (PUT 204)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": {{testFacilityId}},\n    \"name\": \"Оновлений Заклад Postman\",\n    \"city\": \"Львів\",\n    \"street\": \"пл. Ринок, 1\",\n    \"categoryId\": {{testCategoryId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/facilities/{{testFacilityId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"facilities",
+								"{{testFacilityId}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Послуги (Services)",
+			"item": [
+				{
+					"name": "3.1 Отримати список послуг (GET 200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Відповідь є масивом послуг\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an(\"array\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/services",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services"
+							]
+						}
+					}
+				},
+				{
+					"name": "3.2 Створити послугу для закладу (POST 201)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var data = pm.response.json();",
+									"    if (data && data.id) {",
+									"        pm.collectionVariables.set(\"testServiceId\", data.id);",
+									"        pm.environment.set(\"testServiceId\", data.id);",
+									"        pm.globals.set(\"testServiceId\", data.id);",
+									"    }",
+									"}",
+									"",
+									"pm.test(\"Статус відповіді 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Створена послуга має коректні параметри\", function () {",
+									"    var data = pm.response.json();",
+									"    var expectedFacId = pm.collectionVariables.get(\"testFacilityId\") || pm.environment.get(\"testFacilityId\") || pm.globals.get(\"testFacilityId\");",
+									"    pm.expect(data).to.have.property(\"id\");",
+									"    pm.expect(data.id).to.be.above(0);",
+									"    pm.expect(data.name).to.eql(\"Тестова Послуга Postman\");",
+									"    pm.expect(data.price).to.eql(350);",
+									"    pm.expect(data.facilityId).to.eql(parseInt(expectedFacId));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Тестова Послуга Postman\",\n    \"price\": 350,\n    \"facilityId\": {{testFacilityId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services"
+							]
+						}
+					}
+				},
+				{
+					"name": "3.3 Отримати створену послугу за ID (GET 200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Дані послуги відповідають створеним\", function () {",
+									"    var data = pm.response.json();",
+									"    var expectedId = pm.collectionVariables.get(\"testServiceId\") || pm.environment.get(\"testServiceId\") || pm.globals.get(\"testServiceId\");",
+									"    pm.expect(data.id).to.eql(parseInt(expectedId));",
+									"    pm.expect(data.name).to.eql(\"Тестова Послуга Postman\");",
+									"    pm.expect(data.price).to.eql(350);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{testServiceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{testServiceId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "3.4 Оновити послугу (PUT 204)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 204 No Content\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": {{testServiceId}},\n    \"name\": \"Оновлена Послуга Postman\",\n    \"price\": 500,\n    \"facilityId\": {{testFacilityId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{testServiceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{testServiceId}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Очищення даних та перевірка видалення (Clean-up & 404)",
+			"item": [
+				{
+					"name": "4.1 Видалити послугу (DELETE 204)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 204 No Content (успішно видалено)\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{testServiceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{testServiceId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "4.2 Перевірити, що послугу видалено (GET 404)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 404 Not Found (послуги більше немає)\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{testServiceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{testServiceId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "4.3 Видалити заклад (DELETE 204)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 204 No Content (успішно видалено)\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/facilities/{{testFacilityId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"facilities",
+								"{{testFacilityId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "4.4 Перевірити, що заклад видалено (GET 404)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 404 Not Found (закладу більше немає)\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/facilities/{{testFacilityId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"facilities",
+								"{{testFacilityId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "4.5 Видалити категорію (DELETE 204)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 204 No Content (успішно видалено)\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/{{testCategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{testCategoryId}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "4.6 Перевірити, що категорію видалено (GET 404)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Статус відповіді 404 Not Found (категорії більше немає)\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/{{testCategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"{{testCategoryId}}"
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://localservices-ecv8.onrender.com",
+			"type": "string"
+		},
+		{
+			"key": "testCategoryId",
+			"value": "0",
+			"type": "string"
+		},
+		{
+			"key": "testFacilityId",
+			"value": "0",
+			"type": "string"
+		},
+		{
+			"key": "testServiceId",
+			"value": "0",
+			"type": "string"
+		}
+	]
+}

@@ -43,7 +43,7 @@ public class ServicesApiController : ControllerBase
     // PUT: api/Service/5
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutService(int id, Service service)
+    public async Task<IActionResult> PutService(int id, [FromBody] Service service)
     {
         if (id != service.Id)
         {
@@ -74,7 +74,7 @@ public class ServicesApiController : ControllerBase
     // POST: api/Service
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPost]
-    public async Task<ActionResult<Service>> PostService(Service service)
+    public async Task<ActionResult<Service>> PostService([FromBody] Service service)
     {
         _context.Services.Add(service);
         await _context.SaveChangesAsync();
