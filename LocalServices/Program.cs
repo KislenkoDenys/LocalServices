@@ -17,15 +17,11 @@ if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreC
     var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
     var port = uri.Port > 0 ? uri.Port : 5432;
     var database = uri.AbsolutePath.TrimStart('/');
-    connectionString = $"Host={uri.Host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Prefer;Trust Server Certificate=true;Gss Enc Mode=Disable;";
+    connectionString = $"Host={uri.Host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Prefer;Trust Server Certificate=true;";
 }
 else
 {
     connectionString = connectionString.Replace(",", ";");
-    if (!connectionString.Contains("Gss Enc Mode", StringComparison.OrdinalIgnoreCase))
-    {
-        connectionString += ";Gss Enc Mode=Disable;";
-    }
     if (!connectionString.Contains("Trust Server Certificate", StringComparison.OrdinalIgnoreCase))
     {
         connectionString += ";Trust Server Certificate=true;";
