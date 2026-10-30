@@ -57,7 +57,7 @@
                 <ul>
                     @foreach (var service in Model.Services)
                     {
-                        <li>@service.Name - @service.Price.ToString("C")</li>
+                        <li>@service.Name - @service.Price.ToString("N2") ₴</li>
                     }
                 </ul>
             }
