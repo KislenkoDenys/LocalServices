@@ -88,7 +88,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h2 class="h5 fw-bold text-dark mb-0">Розташування на мапі</h2>
                             <button type="button" id="btnGeocode" class="btn btn-primary btn-sm">
-                                📍 Знайти за адресою
+                                Знайти за адресою
                             </button>
                         </div>
                         <p class="text-muted small mb-3">
@@ -238,7 +238,7 @@
                     showAlert("danger", "Не вдалося з'єднатися з картографічним сервісом. Будь ласка, оберіть точку кліком на карті.");
                 } finally {
                     btnGeocode.disabled = false;
-                    btnGeocode.textContent = "📍 Знайти за адресою";
+                    btnGeocode.textContent = "Знайти за адресою";
                 }
             });
         });
