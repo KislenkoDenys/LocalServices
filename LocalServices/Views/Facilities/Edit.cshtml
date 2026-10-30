@@ -154,15 +154,44 @@
                 marker.setLatLng([lat, lng]);
             }
 
+            async function reverseGeocode(lat, lng) {
+                try {
+                    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
+                    const res = await fetch(url, { headers: { 'Accept-Language': 'uk' } });
+                    const data = await res.json();
+                    if (data && data.address) {
+                        const addr = data.address;
+                        const detectedCity = addr.city || addr.town || addr.village || addr.municipality || "";
+                        const streetName = addr.road || addr.pedestrian || addr.square || addr.footway || addr.neighbourhood || "";
+                        const houseNumber = addr.house_number || "";
+                        const fullStreet = [streetName, houseNumber].filter(Boolean).join(", ");
+
+                        if (detectedCity) {
+                            cityInput.value = detectedCity;
+                        }
+                        if (fullStreet) {
+                            streetInput.value = fullStreet;
+                        }
+
+                        const summary = [detectedCity || cityInput.value, fullStreet].filter(Boolean).join(", ");
+                        if (summary) {
+                            showAlert("info", `Адресу автоматично заповнено: ${summary}`);
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Помилка зворотного геокодування:", err);
+                }
+            }
+
             marker.on('dragend', function (e) {
                 const pos = marker.getLatLng();
                 updateCoords(pos.lat, pos.lng);
-                hideAlert();
+                reverseGeocode(pos.lat, pos.lng);
             });
 
             map.on('click', function (e) {
                 updateCoords(e.latlng.lat, e.latlng.lng);
-                hideAlert();
+                reverseGeocode(e.latlng.lat, e.latlng.lng);
             });
 
             function showAlert(type, message) {
@@ -199,6 +228,9 @@
                         updateCoords(newLat, newLng);
                         map.setView([newLat, newLng], 16);
                         showAlert("success", `Адресу знайдено: ${data[0].display_name}`);
+                        if (!streetInput.value.trim()) {
+                            reverseGeocode(newLat, newLng);
+                        }
                     } else {
                         showAlert("danger", "Вказану адресу не знайдено на мапі. Перевірте правильність написання або вкажіть розташування кліком на карті.");
                     }
