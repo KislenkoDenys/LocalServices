@@ -82,7 +82,8 @@ public class SeoE2ETests : IAsyncLifetime
 
         var title = await _page.TitleAsync();
         Assert.False(string.IsNullOrWhiteSpace(title));
-        Assert.Contains("—", title);
+        Assert.True(title.Contains("LocalServices", StringComparison.OrdinalIgnoreCase), "Тег <title> повинен містити назву проєкту 'LocalServices'.");
+        Assert.True(title.Length >= 10, "Тег <title> має бути інформативним.");
 
         var metaDescription = await _page.GetAttributeAsync("meta[name='description']", "content");
         Assert.False(string.IsNullOrWhiteSpace(metaDescription));
