@@ -28,7 +28,10 @@ jobs:
     - name: Build solution
       run: dotnet build --no-restore --configuration Release
 
-    - name: Run unit tests
+    - name: Install Playwright Browsers
+      run: pwsh LocalServices.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+    - name: Run unit & E2E tests
       run: dotnet test --no-restore --verbosity normal
 
   deploy:
