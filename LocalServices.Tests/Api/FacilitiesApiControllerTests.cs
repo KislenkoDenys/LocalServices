@@ -141,4 +141,72 @@ public class FacilitiesApiControllerTests
         Assert.IsType<NoContentResult>(result);
         Assert.Empty(context.Facilities);
     }
+
+    [Fact]
+    public async Task Search_ReturnsEmpty_WhenTermHasLessThanThreeCharacters()
+    {
+        using var context = TestDbContextFactory.Create();
+        var controller = new FacilitiesApiController(context);
+
+        var actionResult = await controller.Search(term: "ма", page: 1, pageSize: 10);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult);
+
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(okResult.Value));
+        var results = jsonDoc.RootElement.GetProperty("results");
+
+        Assert.Equal(0, results.GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Search_ReturnsFilteredFacilities_WhenTermMatches()
+    {
+        using var context = TestDbContextFactory.Create();
+        var cat = new Category { Name = "Ресторани" };
+        context.Categories.Add(cat);
+        await context.SaveChangesAsync();
+
+        context.Facilities.AddRange(
+            new Facility { Name = "Макдональдс", City = "Київ", CategoryId = cat.Id },
+            new Facility { Name = "Сушія", City = "Львів", CategoryId = cat.Id },
+            new Facility { Name = "МакКафе", City = "Одеса", CategoryId = cat.Id }
+        );
+        await context.SaveChangesAsync();
+
+        var controller = new FacilitiesApiController(context);
+
+        var actionResult = await controller.Search(term: "мак", page: 1, pageSize: 10);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult);
+
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(okResult.Value));
+        var results = jsonDoc.RootElement.GetProperty("results");
+
+        Assert.Equal(2, results.GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Search_SupportsPagination_WithMoreIndicator()
+    {
+        using var context = TestDbContextFactory.Create();
+        var cat = new Category { Name = "Категорія" };
+        context.Categories.Add(cat);
+        await context.SaveChangesAsync();
+
+        for (int i = 1; i <= 15; i++)
+        {
+            context.Facilities.Add(new Facility { Name = $"Заклад {i:D2}", CategoryId = cat.Id });
+        }
+        await context.SaveChangesAsync();
+
+        var controller = new FacilitiesApiController(context);
+
+        var actionResult = await controller.Search(term: "Зак", page: 1, pageSize: 10);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult);
+
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(okResult.Value));
+        var results = jsonDoc.RootElement.GetProperty("results");
+        var pagination = jsonDoc.RootElement.GetProperty("pagination");
+
+        Assert.Equal(10, results.GetArrayLength());
+        Assert.True(pagination.GetProperty("more").GetBoolean());
+    }
 }

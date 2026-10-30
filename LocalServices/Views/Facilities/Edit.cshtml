@@ -5,6 +5,8 @@
 }
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
 <div class="container py-3">
     <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
@@ -57,7 +59,23 @@
 
                         <div class="mb-3">
                             <label asp-for="CategoryId" class="form-label fw-medium">Категорія</label>
-                            <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.CategoryList"></select>
+                            @{
+                                var selectedCategoryName = ViewBag.SelectedCategoryName as string;
+                            }
+                            <select asp-for="CategoryId" id="categorySelect" class="form-select">
+                                @if (Model.Category != null)
+                                {
+                                    <option value="@Model.CategoryId" selected>@Model.Category.Name</option>
+                                }
+                                else if (!string.IsNullOrEmpty(selectedCategoryName) && Model != null && Model.CategoryId > 0)
+                                {
+                                    <option value="@Model.CategoryId" selected>@selectedCategoryName</option>
+                                }
+                                else
+                                {
+                                    <option value="">-- Оберіть або знайдіть категорію --</option>
+                                }
+                            </select>
                             <span asp-validation-for="CategoryId" class="text-danger"></span>
                         </div>
 
@@ -123,8 +141,45 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/uk.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            // F2: AJAX Autocomplete через Select2
+            $('#categorySelect').select2({
+                theme: 'bootstrap-5',
+                language: {
+                    inputTooShort: function () { return ''; },
+                    noResults: function () { return 'Нічого не знайдено'; },
+                    searching: function () { return 'Пошук...'; }
+                },
+                placeholder: 'Почніть вводити назву категорії (від 3 символів)...',
+                allowClear: true,
+                width: '100%',
+                minimumInputLength: 3,
+                ajax: {
+                    url: '/api/categories/search',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            term: params.term || '',
+                            page: params.page || 1,
+                            pageSize: 10
+                        };
+                    },
+                    processResults: function (data, params) {
+                        params.page = params.page || 1;
+                        return {
+                            results: data.results,
+                            pagination: {
+                                more: data.pagination ? data.pagination.more : false
+                            }
+                        };
+                    },
+                    cache: true
+                }
+            });
             const defaultLat = 50.4501;
             const defaultLng = 30.5234;
 

@@ -61,6 +61,20 @@ public class ServicesController : Controller
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+        if (service.FacilityId > 0)
+        {
+            var fac = await _context.Facilities.FindAsync(service.FacilityId);
+            if (fac != null) ViewBag.SelectedFacilityName = string.IsNullOrWhiteSpace(fac.City) ? fac.Name : $"{fac.Name} ({fac.City})";
+        }
+        if (service.FacilityId > 0)
+        {
+            var fac = await _context.Facilities.FindAsync(service.FacilityId);
+            if (fac != null)
+            {
+                service.Facility = fac;
+                ViewBag.SelectedFacilityName = string.IsNullOrWhiteSpace(fac.City) ? fac.Name : $"{fac.Name} ({fac.City})";
+            }
+        }
         ViewData["FacilityList"] = new SelectList(_context.Facilities, "Id", "Name", service.FacilityId);
         return View(service);
     }
@@ -73,10 +87,21 @@ public class ServicesController : Controller
             return NotFound();
         }
 
-        var service = await _context.Services.FindAsync(id);
+        var service = await _context.Services
+            .Include(s => s.Facility)
+            .FirstOrDefaultAsync(s => s.Id == id);
         if (service == null)
         {
             return NotFound();
+        }
+        if (service.FacilityId > 0)
+        {
+            var fac = await _context.Facilities.FindAsync(service.FacilityId);
+            if (fac != null)
+            {
+                service.Facility = fac;
+                ViewBag.SelectedFacilityName = string.IsNullOrWhiteSpace(fac.City) ? fac.Name : $"{fac.Name} ({fac.City})";
+            }
         }
         ViewData["FacilityList"] = new SelectList(_context.Facilities, "Id", "Name", service.FacilityId);
         return View(service);
@@ -113,6 +138,15 @@ public class ServicesController : Controller
                 }
             }
             return RedirectToAction(nameof(Index));
+        }
+        if (service.FacilityId > 0)
+        {
+            var fac = await _context.Facilities.FindAsync(service.FacilityId);
+            if (fac != null)
+            {
+                service.Facility = fac;
+                ViewBag.SelectedFacilityName = string.IsNullOrWhiteSpace(fac.City) ? fac.Name : $"{fac.Name} ({fac.City})";
+            }
         }
         ViewData["FacilityList"] = new SelectList(_context.Facilities, "Id", "Name", service.FacilityId);
         return View(service);

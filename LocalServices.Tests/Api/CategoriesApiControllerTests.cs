@@ -121,4 +121,68 @@ public class CategoriesApiControllerTests
         Assert.IsType<NoContentResult>(result);
         Assert.Empty(context.Categories);
     }
+
+    [Fact]
+    public async Task Search_ReturnsFilteredCategories_WhenTermMatches()
+    {
+        using var context = TestDbContextFactory.Create();
+        context.Categories.AddRange(
+            new Category { Name = "Кафе і ресторани" },
+            new Category { Name = "Автосервіси" },
+            new Category { Name = "Кав'ярні" }
+        );
+        await context.SaveChangesAsync();
+
+        var controller = new CategoriesApiController(context);
+
+        var actionResult = await controller.Search(term: "кав", page: 1, pageSize: 10);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult);
+
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(okResult.Value));
+        var results = jsonDoc.RootElement.GetProperty("results");
+
+        Assert.Equal(1, results.GetArrayLength());
+        Assert.Equal("Кав'ярні", results[0].GetProperty("text").GetString());
+    }
+
+    [Fact]
+    public async Task Search_ReturnsEmpty_WhenTermHasLessThanThreeCharacters()
+    {
+        using var context = TestDbContextFactory.Create();
+        context.Categories.Add(new Category { Name = "Кафе" });
+        await context.SaveChangesAsync();
+
+        var controller = new CategoriesApiController(context);
+
+        var actionResult = await controller.Search(term: "ка", page: 1, pageSize: 10);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult);
+
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(okResult.Value));
+        var results = jsonDoc.RootElement.GetProperty("results");
+
+        Assert.Equal(0, results.GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Search_SupportsPagination_WithMoreIndicator()
+    {
+        using var context = TestDbContextFactory.Create();
+        for (int i = 1; i <= 15; i++)
+        {
+            context.Categories.Add(new Category { Name = $"Категорія {i:D2}" });
+        }
+        await context.SaveChangesAsync();
+
+        var controller = new CategoriesApiController(context);
+
+        var actionResult = await controller.Search(term: "Кат", page: 1, pageSize: 10);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult);
+
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(okResult.Value));
+        var results = jsonDoc.RootElement.GetProperty("results");
+        var pagination = jsonDoc.RootElement.GetProperty("pagination");
+
+        Assert.Equal(10, results.GetArrayLength());
+        Assert.True(pagination.GetProperty("more").GetBoolean());
+    }
 }

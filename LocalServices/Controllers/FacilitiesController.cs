@@ -52,6 +52,11 @@ public class FacilitiesController : Controller
         if (categoryId.HasValue)
         {
             facility.CategoryId = categoryId.Value;
+            var category = _context.Categories.Find(categoryId.Value);
+            if (category != null)
+            {
+                ViewBag.SelectedCategoryName = category.Name;
+            }
         }
         return View(facility);
     }
@@ -85,6 +90,14 @@ public class FacilitiesController : Controller
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+        if (facility.CategoryId > 0)
+        {
+            var category = await _context.Categories.FindAsync(facility.CategoryId);
+            if (category != null)
+            {
+                ViewBag.SelectedCategoryName = category.Name;
+            }
+        }
         ViewData["CategoryList"] = new SelectList(_context.Categories, "Id", "Name", facility.CategoryId);
         return View(facility);
     }
@@ -103,6 +116,14 @@ public class FacilitiesController : Controller
         if (facility == null)
         {
             return NotFound();
+        }
+        if (facility.CategoryId > 0)
+        {
+            var category = await _context.Categories.FindAsync(facility.CategoryId);
+            if (category != null)
+            {
+                ViewBag.SelectedCategoryName = category.Name;
+            }
         }
         ViewData["CategoryList"] = new SelectList(_context.Categories, "Id", "Name", facility.CategoryId);
         return View(facility);
@@ -149,6 +170,14 @@ public class FacilitiesController : Controller
                 }
             }
             return RedirectToAction(nameof(Index));
+        }
+        if (facility.CategoryId > 0)
+        {
+            var category = await _context.Categories.FindAsync(facility.CategoryId);
+            if (category != null)
+            {
+                ViewBag.SelectedCategoryName = category.Name;
+            }
         }
         ViewData["CategoryList"] = new SelectList(_context.Categories, "Id", "Name", facility.CategoryId);
         return View(facility);

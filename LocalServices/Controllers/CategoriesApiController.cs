@@ -71,6 +71,49 @@ public class CategoriesApiController : ControllerBase
         return NoContent();
     }
 
+    // GET: api/categories/search?term=кав&page=1&pageSize=10
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string? term, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 50) pageSize = 10;
+
+        // Пошук виконується за умови введення щонайменше 3 символів
+        if (string.IsNullOrWhiteSpace(term) || term.Trim().Length < 3)
+        {
+            return Ok(new
+            {
+                results = Array.Empty<object>(),
+                pagination = new { more = false }
+            });
+        }
+
+        var trimmed = term.Trim().ToLower();
+        var query = _context.Categories
+            .Where(c => c.Name.ToLower().Contains(trimmed));
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderBy(c => c.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(c => new
+            {
+                id = c.Id,
+                text = c.Name
+            })
+            .ToListAsync();
+
+        return Ok(new
+        {
+            results = items,
+            pagination = new
+            {
+                more = (page * pageSize) < totalCount
+            }
+        });
+    }
+
     // POST: api/Category
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPost]
