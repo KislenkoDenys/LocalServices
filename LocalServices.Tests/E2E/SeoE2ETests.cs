@@ -36,22 +36,29 @@ public class SeoE2ETests : IAsyncLifetime
             _targetUrl = cloudUrl;
         }
 
-        int attempts = 3;
+        int attempts = 8;
         while (attempts > 0)
         {
             try
             {
-                await _page.GotoAsync(_targetUrl, new PageGotoOptions
+                var response = await _page.GotoAsync(_targetUrl, new PageGotoOptions
                 {
                     WaitUntil = WaitUntilState.DOMContentLoaded,
                     Timeout = 60000
                 });
-                break;
+
+                if (response != null && response.Status == 200)
+                {
+                    break;
+                }
+
+                attempts--;
+                await Task.Delay(4000);
             }
             catch when (attempts > 1)
             {
                 attempts--;
-                await Task.Delay(5000);
+                await Task.Delay(4000);
             }
         }
     }
