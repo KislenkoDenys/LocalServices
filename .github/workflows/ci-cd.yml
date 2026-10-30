@@ -32,7 +32,7 @@ jobs:
       run: pwsh LocalServices.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
 
     - name: Run unit & E2E tests
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test --no-build --configuration Release --verbosity normal
 
   deploy:
     name: Deploy to Cloud (Render)

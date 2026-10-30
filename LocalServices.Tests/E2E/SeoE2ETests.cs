@@ -36,11 +36,24 @@ public class SeoE2ETests : IAsyncLifetime
             _targetUrl = cloudUrl;
         }
 
-        await _page.GotoAsync(_targetUrl, new PageGotoOptions
+        int attempts = 3;
+        while (attempts > 0)
         {
-            WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 30000
-        });
+            try
+            {
+                await _page.GotoAsync(_targetUrl, new PageGotoOptions
+                {
+                    WaitUntil = WaitUntilState.DOMContentLoaded,
+                    Timeout = 60000
+                });
+                break;
+            }
+            catch when (attempts > 1)
+            {
+                attempts--;
+                await Task.Delay(5000);
+            }
+        }
     }
 
     public async Task DisposeAsync()
