@@ -26,6 +26,12 @@ namespace LocalServices.Models
         [Display(Name = "Години роботи")]
         public string? WorkingHours { get; set; }
 
+        [Display(Name = "Широта (Latitude)")]
+        public double? Latitude { get; set; }
+
+        [Display(Name = "Довгота (Longitude)")]
+        public double? Longitude { get; set; }
+
         [Display(Name = "Зображення")]
         public string? ImagePath { get; set; }
 

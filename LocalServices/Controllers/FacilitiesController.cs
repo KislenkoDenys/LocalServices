@@ -56,12 +56,19 @@ public class FacilitiesController : Controller
         return View(facility);
     }
 
+    // GET: Facilities/Map
+    public async Task<IActionResult> Map()
+    {
+        ViewBag.Categories = await _context.Categories.OrderBy(c => c.Name).ToListAsync();
+        return View();
+    }
+
     // POST: FACILITYS/Create
     // To protect from overposting attacks, enable the specific properties you want to bind to.
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Name,City,Street,Description,Phone,WorkingHours,ImagePath,ImageFile,CategoryId")] Facility facility)
+    public async Task<IActionResult> Create([Bind("Id,Name,City,Street,Latitude,Longitude,Description,Phone,WorkingHours,ImagePath,ImageFile,CategoryId")] Facility facility)
     {
         if (ModelState.IsValid)
         {
@@ -106,7 +113,7 @@ public class FacilitiesController : Controller
     // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,City,Street,Description,Phone,WorkingHours,ImagePath,ImageFile,CategoryId")] Facility facility)
+    public async Task<IActionResult> Edit(int? id, [Bind("Id,Name,City,Street,Latitude,Longitude,Description,Phone,WorkingHours,ImagePath,ImageFile,CategoryId")] Facility facility)
     {
         if (id != facility.Id)
         {

@@ -1,93 +1,214 @@
 @model LocalServices.Models.Facility
 
 @{
-    ViewData["Title"] = "Редагувати";
+    ViewData["Title"] = "Редагувати заклад";
 }
 
-<h1>Редагувати</h1>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
-<h4>Заклад</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit" enctype="multipart/form-data">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
-            <input type="hidden" asp-for="ImagePath" />
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <h1 class="h3 fw-bold text-dark mb-0">Редагувати заклад: @Model.Name</h1>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Повернутися до списку</a>
+    </div>
 
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
+    <form asp-action="Edit" enctype="multipart/form-data">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="ImagePath" />
 
-            <div class="form-group">
-                <label asp-for="City" class="control-label"></label>
-                <input asp-for="City" class="form-control" />
-                <span asp-validation-for="City" class="text-danger"></span>
-            </div>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-bold text-dark mb-3">Основна інформація</h2>
 
-            <div class="form-group">
-                <label asp-for="Street" class="control-label"></label>
-                <input asp-for="Street" class="form-control" />
-                <span asp-validation-for="Street" class="text-danger"></span>
-            </div>
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label fw-medium"></label>
+                            <input asp-for="Name" class="form-control" required />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
 
-            <div class="form-group">
-                <label asp-for="Phone" class="control-label"></label>
-                <input asp-for="Phone" class="form-control" />
-                <span asp-validation-for="Phone" class="text-danger"></span>
-            </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="City" class="form-label fw-medium"></label>
+                                <input asp-for="City" id="cityInput" class="form-control" />
+                                <span asp-validation-for="City" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Street" class="form-label fw-medium"></label>
+                                <input asp-for="Street" id="streetInput" class="form-control" />
+                                <span asp-validation-for="Street" class="text-danger"></span>
+                            </div>
+                        </div>
 
-            <div class="form-group">
-                <label asp-for="WorkingHours" class="control-label"></label>
-                <input asp-for="WorkingHours" class="form-control" />
-                <span asp-validation-for="WorkingHours" class="text-danger"></span>
-            </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Phone" class="form-label fw-medium"></label>
+                                <input asp-for="Phone" class="form-control" />
+                                <span asp-validation-for="Phone" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="WorkingHours" class="form-label fw-medium"></label>
+                                <input asp-for="WorkingHours" class="form-control" />
+                                <span asp-validation-for="WorkingHours" class="text-danger"></span>
+                            </div>
+                        </div>
 
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
+                        <div class="mb-3">
+                            <label asp-for="CategoryId" class="form-label fw-medium">Категорія</label>
+                            <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.CategoryList"></select>
+                            <span asp-validation-for="CategoryId" class="text-danger"></span>
+                        </div>
 
-            <div class="form-group">
-                <label class="control-label">Поточне фото</label>
-                <div>
-                    @if (!string.IsNullOrEmpty(Model.ImagePath))
-                    {
-                        <img src="@Model.ImagePath" alt="@Model.Name" style="max-height: 100px; max-width: 150px; object-fit: cover;" />
-                    }
-                    else
-                    {
-                        <span>Немає фото</span>
-                    }
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label fw-medium"></label>
+                            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium d-block">Фотографія закладу</label>
+                            @if (!string.IsNullOrEmpty(Model.ImagePath))
+                            {
+                                <div class="mb-2">
+                                    <img src="@Model.ImagePath" alt="@Model.Name" style="max-height: 120px; max-width: 200px; object-fit: cover; border-radius: 0.5rem;" />
+                                </div>
+                            }
+                            <input asp-for="ImageFile" type="file" class="form-control" accept="image/*"/>
+                            <span asp-validation-for="ImageFile" class="text-danger"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label class="control-label">Змінити фото</label>
-                <input asp-for="ImageFile" type="file" class="form-control" accept="image/*"/>
-                <span asp-validation-for="ImageFile" class="text-danger"></span>
-            </div>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h2 class="h5 fw-bold text-dark mb-0">Розташування на мапі</h2>
+                            <button type="button" id="btnGeocode" class="btn btn-primary btn-sm">
+                                📍 Знайти за адресою
+                            </button>
+                        </div>
+                        <p class="text-muted small mb-3">
+                            Введіть місто та вулицю зліва і натисніть «Знайти за адресою» або перетягніть маркер на карті.
+                        </p>
 
-            <div class="form-group">
-                <label asp-for="CategoryId" class="control-label">Категорія</label>
-                <select asp-for="CategoryId" class="form-control" asp-items="ViewBag.CategoryList"></select>
-                <span asp-validation-for="CategoryId" class="text-danger"></span>
-            </div>
+                        <div id="geocodeAlert" class="alert d-none small py-2 px-3 mb-3" role="alert"></div>
 
-            <div class="form-group">
-                <input type="submit" value="Зберегти" class="btn btn-primary" />
-            </div>
-        </form>
-    </div>
-</div>
+                        <div id="facilityMiniMap" style="height: 320px; border-radius: 0.5rem; border: 1px solid #dee2e6;" class="mb-3"></div>
 
-<div>
-    <a asp-action="Index">Назад до списку</a>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label asp-for="Latitude" class="form-label small text-muted mb-1">Широта (Lat)</label>
+                                <input asp-for="Latitude" id="latitudeInput" class="form-control form-control-sm" readonly />
+                            </div>
+                            <div class="col-6">
+                                <label asp-for="Longitude" class="form-label small text-muted mb-1">Довгота (Lng)</label>
+                                <input asp-for="Longitude" id="longitudeInput" class="form-control form-control-sm" readonly />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <input type="submit" value="Зберегти зміни" class="btn btn-primary btn-lg fw-bold" />
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const defaultLat = 50.4501;
+            const defaultLng = 30.5234;
+
+            const latInput = document.getElementById("latitudeInput");
+            const lngInput = document.getElementById("longitudeInput");
+            const cityInput = document.getElementById("cityInput");
+            const streetInput = document.getElementById("streetInput");
+            const btnGeocode = document.getElementById("btnGeocode");
+            const alertBox = document.getElementById("geocodeAlert");
+
+            let currentLat = parseFloat(latInput.value) || defaultLat;
+            let currentLng = parseFloat(lngInput.value) || defaultLng;
+
+            latInput.value = currentLat.toFixed(6);
+            lngInput.value = currentLng.toFixed(6);
+
+            const map = L.map('facilityMiniMap').setView([currentLat, currentLng], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            let marker = L.marker([currentLat, currentLng], { draggable: true }).addTo(map);
+
+            function updateCoords(lat, lng) {
+                latInput.value = lat.toFixed(6);
+                lngInput.value = lng.toFixed(6);
+                marker.setLatLng([lat, lng]);
+            }
+
+            marker.on('dragend', function (e) {
+                const pos = marker.getLatLng();
+                updateCoords(pos.lat, pos.lng);
+                hideAlert();
+            });
+
+            map.on('click', function (e) {
+                updateCoords(e.latlng.lat, e.latlng.lng);
+                hideAlert();
+            });
+
+            function showAlert(type, message) {
+                alertBox.className = `alert alert-${type} small py-2 px-3 mb-3`;
+                alertBox.textContent = message;
+                alertBox.classList.remove("d-none");
+            }
+
+            function hideAlert() {
+                alertBox.classList.add("d-none");
+            }
+
+            btnGeocode.addEventListener("click", async function () {
+                const city = cityInput.value.trim();
+                const street = streetInput.value.trim();
+
+                if (!city && !street) {
+                    showAlert("warning", "Будь ласка, вкажіть місто та вулицю для пошуку.");
+                    return;
+                }
+
+                const query = [street, city, "Україна"].filter(Boolean).join(", ");
+                btnGeocode.disabled = true;
+                btnGeocode.textContent = "Пошук...";
+
+                try {
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+                    const res = await fetch(url, { headers: { 'Accept-Language': 'uk' } });
+                    const data = await res.json();
+
+                    if (data && data.length > 0) {
+                        const newLat = parseFloat(data[0].lat);
+                        const newLng = parseFloat(data[0].lon);
+                        updateCoords(newLat, newLng);
+                        map.setView([newLat, newLng], 16);
+                        showAlert("success", `Адресу знайдено: ${data[0].display_name}`);
+                    } else {
+                        showAlert("danger", "Вказану адресу не знайдено на мапі. Перевірте правильність написання або вкажіть розташування кліком на карті.");
+                    }
+                } catch (err) {
+                    showAlert("danger", "Не вдалося з'єднатися з картографічним сервісом. Будь ласка, оберіть точку кліком на карті.");
+                } finally {
+                    btnGeocode.disabled = false;
+                    btnGeocode.textContent = "📍 Знайти за адресою";
+                }
+            });
+        });
+    </script>
 }

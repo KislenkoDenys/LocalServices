@@ -1,0 +1,218 @@
+@{
+    ViewData["Title"] = "Інтерактивна мапа закладів";
+    var categories = ViewBag.Categories as IEnumerable<LocalServices.Models.Category> ?? Enumerable.Empty<LocalServices.Models.Category>();
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+<style>
+    #mainMap {
+        height: 650px;
+        width: 100%;
+        border-radius: 0.75rem;
+        box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+    }
+    .custom-popup .leaflet-popup-content-wrapper {
+        border-radius: 0.75rem;
+        padding: 0;
+        overflow: hidden;
+    }
+    .custom-popup .leaflet-popup-content {
+        margin: 0;
+        line-height: 1.4;
+    }
+    .popup-img {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+    }
+    .popup-body {
+        padding: 12px 14px;
+    }
+    .filter-chip {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .filter-chip.active {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0d6efd !important;
+    }
+</style>
+
+<div class="container-fluid py-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 pb-2 border-bottom">
+        <div>
+            <h1 class="h3 fw-bold text-dark mb-1">Інтерактивна мапа закладів</h1>
+            <p class="text-muted small mb-0">Знайдіть потрібний заклад у вашому місті та перегляньте деталі</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary fs-6 py-2 px-3 rounded-pill" id="facilityCountBadge">
+                Закладів на мапі: 0
+            </span>
+            <a asp-action="Create" class="btn btn-success btn-sm">
+                + Додати заклад
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                Список таблицею
+            </a>
+        </div>
+    </div>
+
+    <!-- Панель фільтрації C8 -->
+    <div class="card border-0 shadow-sm rounded-3 mb-3 bg-light">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-lg-4 col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">🔍</span>
+                        <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Швидкий пошук за назвою або адресою..." />
+                    </div>
+                </div>
+
+                <div class="col-lg-8 col-md-6">
+                    <div class="d-flex flex-wrap gap-1 align-items-center" id="categoryChips">
+                        <span class="text-muted small me-2 fw-medium">Категорії:</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill filter-chip active" data-category="all">
+                            Всі категорії
+                        </button>
+                        @foreach (var cat in categories)
+                        {
+                            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill filter-chip" data-category="@cat.Id">
+                                @cat.Name
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="noCoordsAlert" class="alert alert-info py-2 px-3 mb-3 d-none" role="alert">
+        ℹ️ Наразі закладів із координатами не знайдено. Ви можете перейти в <a asp-action="Index" class="alert-link">Каталог закладів</a>, відкрити редагування та вказати розташування за допомогою кнопки «Знайти за адресою» або кліком на карті.
+    </div>
+
+    <div class="position-relative">
+        <div id="mainMap"></div>
+        <div id="mapLoader" class="position-absolute top-50 start-50 translate-middle bg-white p-3 rounded-3 shadow text-center" style="z-index: 1000;">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="small mt-2 fw-medium">Завантаження об'єктів...</div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            const map = L.map('mainMap').setView([50.4501, 30.5234], 11);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            const markersLayer = L.layerGroup().addTo(map);
+            const countBadge = document.getElementById("facilityCountBadge");
+            const loader = document.getElementById("mapLoader");
+            const noCoordsAlert = document.getElementById("noCoordsAlert");
+            const searchInput = document.getElementById("searchInput");
+            const chipButtons = document.querySelectorAll("#categoryChips .filter-chip");
+
+            let allFacilities = [];
+            let selectedCategory = "all";
+            let searchQuery = "";
+
+            try {
+                const response = await fetch('/api/Facilities');
+                allFacilities = await response.json();
+            } catch (err) {
+                console.error("Помилка завантаження закладів:", err);
+            } finally {
+                loader.classList.add("d-none");
+            }
+
+            function renderMarkers() {
+                markersLayer.clearLayers();
+
+                const filtered = allFacilities.filter(f => {
+                    const matchesCategory = selectedCategory === "all" || f.categoryId.toString() === selectedCategory;
+                    
+                    const q = searchQuery.toLowerCase();
+                    const matchesSearch = !q ||
+                        (f.name && f.name.toLowerCase().includes(q)) ||
+                        (f.city && f.city.toLowerCase().includes(q)) ||
+                        (f.street && f.street.toLowerCase().includes(q)) ||
+                        (f.category && f.category.name && f.category.name.toLowerCase().includes(q));
+
+                    return matchesCategory && matchesSearch;
+                });
+
+                const withCoords = filtered.filter(f => f.latitude != null && f.longitude != null);
+                countBadge.textContent = `Закладів на мапі: ${withCoords.length}`;
+
+                if (withCoords.length === 0) {
+                    noCoordsAlert.classList.remove("d-none");
+                } else {
+                    noCoordsAlert.classList.add("d-none");
+                }
+
+                const bounds = [];
+
+                withCoords.forEach(f => {
+                    const latLng = [f.latitude, f.longitude];
+                    bounds.push(latLng);
+
+                    const categoryName = f.category ? f.category.name : "Заклад";
+                    const fullAddress = [f.city, f.street].filter(Boolean).join(", ") || "Адреса уточнюється";
+                    const imageTag = f.imagePath 
+                        ? `<img src="${f.imagePath}" alt="${f.name}" class="popup-img" />`
+                        : `<div class="bg-secondary text-white text-center py-4 small">Фото відсутнє</div>`;
+
+                    const popupHtml = `
+                        <div class="custom-popup" style="width: 240px;">
+                            ${imageTag}
+                            <div class="popup-body">
+                                <span class="badge bg-primary mb-1">${categoryName}</span>
+                                <h6 class="fw-bold text-dark mb-1">${f.name}</h6>
+                                <p class="text-muted small mb-1">📍 ${fullAddress}</p>
+                                ${f.phone ? `<p class="text-secondary small mb-2">📞 ${f.phone}</p>` : ''}
+                                <a href="/Facilities/Details/${f.id}" class="btn btn-outline-primary btn-sm w-100">
+                                    Детальніше
+                                </a>
+                            </div>
+                        </div>
+                    `;
+
+                    L.marker(latLng)
+                        .bindPopup(popupHtml, { className: 'custom-popup' })
+                        .addTo(markersLayer);
+                });
+
+                if (bounds.length > 0) {
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+                }
+            }
+
+            // Початкове відображення
+            renderMarkers();
+
+            // Обробка фільтра за категоріями
+            chipButtons.forEach(btn => {
+                btn.addEventListener("click", function () {
+                    chipButtons.forEach(b => b.classList.remove("active"));
+                    this.classList.add("active");
+                    selectedCategory = this.getAttribute("data-category");
+                    renderMarkers();
+                });
+            });
+
+            // Обробка живого пошуку
+            searchInput.addEventListener("input", function () {
+                searchQuery = this.value.trim();
+                renderMarkers();
+            });
+        });
+    </script>
+}
+

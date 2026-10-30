@@ -48,6 +48,8 @@ public class ModelTests
         Assert.Null(facility.Description);
         Assert.Null(facility.Phone);
         Assert.Null(facility.WorkingHours);
+        Assert.Null(facility.Latitude);
+        Assert.Null(facility.Longitude);
         Assert.Null(facility.ImagePath);
         Assert.Null(facility.ImageFile);
         Assert.Equal(0, facility.CategoryId);
@@ -70,6 +72,8 @@ public class ModelTests
             Description = "Тестовий опис",
             Phone = "+380501112233",
             WorkingHours = "09:00 - 21:00",
+            Latitude = 50.4501,
+            Longitude = 30.5234,
             ImagePath = "data:image/png;base64,abc",
             CategoryId = 10,
             Category = category,
@@ -83,6 +87,8 @@ public class ModelTests
         Assert.Equal("Тестовий опис", facility.Description);
         Assert.Equal("+380501112233", facility.Phone);
         Assert.Equal("09:00 - 21:00", facility.WorkingHours);
+        Assert.Equal(50.4501, facility.Latitude);
+        Assert.Equal(30.5234, facility.Longitude);
         Assert.Equal("data:image/png;base64,abc", facility.ImagePath);
         Assert.Equal(10, facility.CategoryId);
         Assert.Same(category, facility.Category);
