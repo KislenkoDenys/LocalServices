@@ -76,8 +76,8 @@
             </span>
         </div>
         <div>
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm me-1">Редагувати</a>
-            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">До списку</a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm me-1">Редагувати картку</a>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Каталог закладів</a>
         </div>
     </div>
 
@@ -94,23 +94,55 @@
 
             <section class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-body p-4">
-                    <h2 class="h4 card-title fw-bold text-dark mb-3">Інформація про заклад</h2>
-                    <p class="card-text text-secondary leading-relaxed">
-                        @if (!string.IsNullOrWhiteSpace(Model.Description))
-                        {
-                            <span style="white-space: pre-line;">@Model.Description</span>
-                        }
-                        else
-                        {
-                            <span>
-                                Заклад <strong>@Model.Name</strong> — це сучасний @categoryName у місті @cityName, 
-                                розташований за адресою @fullAddress. Тут пропонують якісний сервіс та широкий асортимент послуг 
-                                для мешканців і гостей міста.
-                            </span>
-                        }
+                    <h2 class="h4 card-title fw-bold text-dark mb-3">Детальна інформація про заклад</h2>
+                    
+                    <p class="card-text text-secondary leading-relaxed mb-3">
+                        Заклад <strong>@Model.Name</strong> є провідним представником у категорії <strong>@categoryName</strong> у місті <strong>@cityName</strong>. 
+                        Зручне розташування за адресою <em>@fullAddress</em> забезпечує швидкий та комфортний доступ як для постійних жителів, 
+                        так і для гостей міста @cityName. Наша мета — надати кожному клієнту сервіс найвищої якості та індивідуальний підхід.
                     </p>
-                    <p class="text-secondary small mb-0">
-                        Щоб дізнатися більше про заклад @Model.Name або уточнити деталі, звертайтеся за контактами на сторінці.
+
+                    @if (!string.IsNullOrWhiteSpace(Model.Description))
+                    {
+                        <p class="card-text text-secondary leading-relaxed mb-3" style="white-space: pre-line;">
+                            @Model.Description
+                        </p>
+                    }
+
+                    <p class="card-text text-secondary leading-relaxed mb-3">
+                        Обираючи <strong>@Model.Name</strong>, ви довіряєте свій час та комфорт професіоналам своєї справи. 
+                        Заклад пропонує комплексний спектр послуг, що охоплює популярні запити у напрямку @categoryName. 
+                        Сучасне оснащення, уважний кваліфікований персонал, дотримання високих стандартів якості та безпеки гарантують 
+                        відмінний результат при кожному зверненні у місті @cityName.
+                    </p>
+
+                    <p class="card-text text-secondary leading-relaxed mb-3">
+                        Для вашої зручності заклад @Model.Name у місті @cityName працює за гнучким графіком: 
+                        <strong>@(string.IsNullOrWhiteSpace(Model.WorkingHours) ? "щоденно у зручний час" : Model.WorkingHours)</strong>. 
+                        Ви завжди можете заздалегідь спланувати свій візит або уточнити актуальну вартість та наявність вільних місць 
+                        за контактним номером телефону <strong>@(string.IsNullOrWhiteSpace(Model.Phone) ? "зазначеним у профілі" : Model.Phone)</strong>.
+                    </p>
+
+                    <div class="bg-light p-3 rounded-3 border-start border-primary border-4 my-3">
+                        <h3 class="h6 fw-bold text-dark mb-2">Переваги відвідування @Model.Name</h3>
+                        <p class="text-secondary small mb-2">
+                            • Зручне розташування в доступній частині міста @cityName за адресою @fullAddress.
+                        </p>
+                        <p class="text-secondary small mb-2">
+                            • Широкий перелік перевірених послуг у категорії @categoryName з чесними та прозорими цінами.
+                        </p>
+                        <p class="text-secondary small mb-2">
+                            • Клієнтоорієнтований сервіс, пунктуальність та висока кваліфікація команди спеціалістів.
+                        </p>
+                        <p class="text-secondary small mb-0">
+                            • Актуальний прайс-лист на послуги, який регулярно оновлюється та представлений у таблиці нижче.
+                        </p>
+                    </div>
+
+                    <p class="card-text text-secondary leading-relaxed mb-0">
+                        Ознайомтеся з детальним переліком послуг та цін закладу @Model.Name нижче на цій сторінці. 
+                        Якщо у вас виникли запитання щодо послуг у категорії @categoryName або ви бажаєте завітати до нас у місті @cityName, 
+                        використовуйте контакти з бічного інформаційного блоку для швидкого зв'язку.
                     </p>
                 </div>
             </section>
@@ -197,11 +229,17 @@
                     </div>
 
                     <div class="d-grid gap-2">
+                        <a href="https://maps.google.com/?q=@Uri.EscapeDataString(Model.Name + " " + cityName + " " + (Model.Street ?? ""))" 
+                           target="_blank" 
+                           rel="noopener noreferrer" 
+                           class="btn btn-outline-success">
+                            Знайти на Google Maps
+                        </a>
                         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
-                            Редагувати заклад
+                            Оновити інформацію
                         </a>
                         <a asp-action="Index" class="btn btn-outline-secondary">
-                            Назад до списку
+                            Повернутися до каталогу
                         </a>
                     </div>
                 </div>
