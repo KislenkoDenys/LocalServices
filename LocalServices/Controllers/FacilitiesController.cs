@@ -1,18 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using LocalServices.Models;
 using LocalServices.Data;
+using LocalServices.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 public class FacilitiesController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _hostEnvironment;
+    private readonly IMemoryCache? _cache;
 
-    public FacilitiesController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment)
+    public FacilitiesController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment, IMemoryCache? cache = null)
     {
         _context = context;
         _hostEnvironment = hostEnvironment;
+        _cache = cache;
     }
 
     // GET: FACILITYS
@@ -88,6 +92,10 @@ public class FacilitiesController : Controller
             }
             _context.Add(facility);
             await _context.SaveChangesAsync();
+            _cache?.Remove(CacheConstants.FacilitiesAllKey);
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("[CACHE INVALIDATED] Кеш закладів очищено через веб-форму створення.");
+            Console.ResetColor();
             return RedirectToAction(nameof(Index));
         }
         if (facility.CategoryId > 0)
@@ -157,6 +165,10 @@ public class FacilitiesController : Controller
 
                 _context.Update(facility);
                 await _context.SaveChangesAsync();
+                _cache?.Remove(CacheConstants.FacilitiesAllKey);
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"[CACHE INVALIDATED] Кеш закладів очищено через веб-форму редагування ID={facility.Id}.");
+                Console.ResetColor();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -215,6 +227,10 @@ public class FacilitiesController : Controller
         }
 
         await _context.SaveChangesAsync();
+        _cache?.Remove(CacheConstants.FacilitiesAllKey);
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"[CACHE INVALIDATED] Кеш закладів очищено через видалення у веб-формі ID={id}.");
+        Console.ResetColor();
         return RedirectToAction(nameof(Index));
     }
 

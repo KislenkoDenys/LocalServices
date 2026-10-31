@@ -1,15 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using LocalServices.Models;
 using LocalServices.Data;
+using LocalServices.Infrastructure;
 
 public class CategoriesController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IMemoryCache? _cache;
 
-    public CategoriesController(ApplicationDbContext context)
+    public CategoriesController(ApplicationDbContext context, IMemoryCache? cache = null)
     {
         _context = context;
+        _cache = cache;
     }
 
     // GET: CATEGORYS
@@ -56,6 +60,10 @@ public class CategoriesController : Controller
         {
             _context.Add(category);
             await _context.SaveChangesAsync();
+            _cache?.Remove(CacheConstants.CategoriesAllKey);
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("[CACHE INVALIDATED] Кеш категорій очищено через веб-форму створення.");
+            Console.ResetColor();
             return RedirectToAction(nameof(Index));
         }
         return View(category);
@@ -97,6 +105,10 @@ public class CategoriesController : Controller
             {
                 _context.Update(category);
                 await _context.SaveChangesAsync();
+                _cache?.Remove(CacheConstants.CategoriesAllKey);
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"[CACHE INVALIDATED] Кеш категорій очищено через веб-форму редагування ID={category.Id}.");
+                Console.ResetColor();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -145,6 +157,10 @@ public class CategoriesController : Controller
         }
 
         await _context.SaveChangesAsync();
+        _cache?.Remove(CacheConstants.CategoriesAllKey);
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"[CACHE INVALIDATED] Кеш категорій очищено через видалення у веб-формі ID={id}.");
+        Console.ResetColor();
         return RedirectToAction(nameof(Index));
     }
 

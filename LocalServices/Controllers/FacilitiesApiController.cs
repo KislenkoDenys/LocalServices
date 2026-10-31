@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using LocalServices.Models;
 using LocalServices.Data;
+using LocalServices.Infrastructure;
 
 [Route("api/[controller]")]
 [Route("api/facilities")]
@@ -9,13 +11,17 @@ using LocalServices.Data;
 public class FacilitiesApiController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IMemoryCache _cache;
+    private readonly ILogger<FacilitiesApiController>? _logger;
 
-    public FacilitiesApiController(ApplicationDbContext context)
+    public FacilitiesApiController(ApplicationDbContext context, IMemoryCache? cache = null, ILogger<FacilitiesApiController>? logger = null)
     {
         _context = context;
+        _cache = cache ?? new MemoryCache(new MemoryCacheOptions());
+        _logger = logger;
     }
 
-    // GET: api/facilities?skip=0&limit=10 (B1: Pagination API)
+    // GET: api/facilities?skip=0&limit=10 (B1: Pagination API, B9: In-Memory Caching)
     [HttpGet]
     public async Task<ActionResult<PagedResult<Facility>>> GetFacilities([FromQuery] int skip = 0, [FromQuery] int limit = 10)
     {
@@ -23,17 +29,41 @@ public class FacilitiesApiController : ControllerBase
         if (limit < 1) limit = 10;
         if (limit > 100) limit = 100;
 
-        var query = _context.Facilities
-            .Include(f => f.Category)
-            .Include(f => f.Services)
-            .AsQueryable();
+        // B9: Перевірка кешу в оперативній пам'яті (IMemoryCache)
+        if (!_cache.TryGetValue(CacheConstants.FacilitiesAllKey, out List<Facility>? allFacilities) || allFacilities == null)
+        {
+            allFacilities = await _context.Facilities
+                .Include(f => f.Category)
+                .Include(f => f.Services)
+                .OrderBy(f => f.Id)
+                .ToListAsync();
 
-        var totalCount = await query.CountAsync();
-        var items = await query
-            .OrderBy(f => f.Id)
+            var cacheOptions = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(CacheConstants.DefaultCacheDuration)
+                .SetSlidingExpiration(TimeSpan.FromMinutes(2));
+
+            _cache.Set(CacheConstants.FacilitiesAllKey, allFacilities, cacheOptions);
+
+            Response?.Headers.TryAdd("X-Cache", "MISS");
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"[CACHE MISS] Заклади ({allFacilities.Count} шт.) завантажено з бази даних та збережено в IMemoryCache.");
+            Console.ResetColor();
+            _logger?.LogInformation("[CACHE MISS] Заклади завантажено з бази даних.");
+        }
+        else
+        {
+            Response?.Headers.TryAdd("X-Cache", "HIT");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"[CACHE HIT] Заклади ({allFacilities.Count} шт.) повернуто з IMemoryCache (запитів до БД: 0).");
+            Console.ResetColor();
+            _logger?.LogInformation("[CACHE HIT] Заклади отримано з кешу.");
+        }
+
+        var totalCount = allFacilities.Count;
+        var items = allFacilities
             .Skip(skip)
             .Take(limit)
-            .ToListAsync();
+            .ToList();
 
         var path = Request?.Path.Value ?? "/api/facilities";
         string? nextLink = (skip + limit < totalCount) ? $"{path}?skip={skip + limit}&limit={limit}" : null;
@@ -62,7 +92,7 @@ public class FacilitiesApiController : ControllerBase
         var facility = await _context.Facilities
             .Include(f => f.Category)
             .Include(f => f.Services)
-            .FirstOrDefaultAsync(f => f.Id == id);
+            .FirstOrDefaultAsync(c => c.Id == id);
 
         if (facility == null)
         {
@@ -87,6 +117,9 @@ public class FacilitiesApiController : ControllerBase
         try
         {
             await _context.SaveChangesAsync();
+
+            // B9: Інвалідація кешу при оновленні закладу
+            InvalidateCache($"оновлення закладу ID={id}");
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -154,6 +187,9 @@ public class FacilitiesApiController : ControllerBase
         _context.Facilities.Add(facility);
         await _context.SaveChangesAsync();
 
+        // B9: Інвалідація кешу при створенні закладу
+        InvalidateCache($"створення закладу «{facility.Name}»");
+
         return CreatedAtAction(nameof(GetFacility), new { id = facility.Id }, facility);
     }
 
@@ -170,7 +206,19 @@ public class FacilitiesApiController : ControllerBase
         _context.Facilities.Remove(facility);
         await _context.SaveChangesAsync();
 
+        // B9: Інвалідація кешу при видаленні закладу
+        InvalidateCache($"видалення закладу ID={id}");
+
         return NoContent();
+    }
+
+    private void InvalidateCache(string reason)
+    {
+        _cache.Remove(CacheConstants.FacilitiesAllKey);
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"[CACHE INVALIDATED] Кеш закладів очищено через {reason}.");
+        Console.ResetColor();
+        _logger?.LogInformation("[CACHE INVALIDATED] Кеш закладів очищено через {Reason}.", reason);
     }
 
     private bool FacilityExists(int id)

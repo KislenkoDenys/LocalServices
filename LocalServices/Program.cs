@@ -33,6 +33,10 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
+
+// B9: Кешування в оперативній пам'яті (IMemoryCache)
+builder.Services.AddMemoryCache();
+
 builder.Services.AddControllersWithViews(options =>
 {
     options.ModelBinderProviders.Insert(0, new LocalServices.Infrastructure.InvariantDecimalModelBinderProvider());
