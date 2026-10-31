@@ -4,16 +4,19 @@ using Microsoft.Extensions.Caching.Memory;
 using LocalServices.Models;
 using LocalServices.Data;
 using LocalServices.Infrastructure;
+using LocalServices.Services;
 
 public class CategoriesController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IMemoryCache? _cache;
+    private readonly ITelegramNotificationService? _telegramService;
 
-    public CategoriesController(ApplicationDbContext context, IMemoryCache? cache = null)
+    public CategoriesController(ApplicationDbContext context, IMemoryCache? cache = null, ITelegramNotificationService? telegramService = null)
     {
         _context = context;
         _cache = cache;
+        _telegramService = telegramService;
     }
 
     // GET: CATEGORYS
@@ -60,6 +63,12 @@ public class CategoriesController : Controller
         {
             _context.Add(category);
             await _context.SaveChangesAsync();
+
+            if (_telegramService != null)
+            {
+                await _telegramService.SendCategoryCreatedAsync(category);
+            }
+
             _cache?.Remove(CacheConstants.CategoriesAllKey);
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("[CACHE INVALIDATED] Кеш категорій очищено через веб-форму створення.");

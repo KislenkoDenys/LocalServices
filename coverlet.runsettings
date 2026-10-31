@@ -2,14 +2,12 @@
 <RunSettings>
   <DataCollectionRunSettings>
     <DataCollectors>
-      <DataCollector friendlyName="XPlat code coverage">
+      <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
-          <Format>cobertura</Format>
-          <Exclude>[*]AspNetCoreGeneratedDocument.*,[*]*.Migrations.*,[*]Program</Exclude>
-          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+          <Exclude>[*]AspNetCoreGeneratedDocument.*,[*]*Migration*,[*]Program</Exclude>
+          <ExcludeByFile>**/Migrations/*,**/wwwroot/*,**/*.cshtml</ExcludeByFile>
         </Configuration>
       </DataCollector>
     </DataCollectors>
   </DataCollectionRunSettings>
 </RunSettings>
-

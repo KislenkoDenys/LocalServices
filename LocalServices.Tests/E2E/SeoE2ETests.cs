@@ -63,7 +63,6 @@ public class SeoE2ETests : IAsyncLifetime
             UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         });
 
-        // Перевіряємо локальний сервер або хмарний деплой Render
         var localUrl = "http://localhost:8080/Facilities/Details/1";
         var cloudUrl = "https://localservices-ecv8.onrender.com/Facilities/Details/1";
 
@@ -107,7 +106,6 @@ public class SeoE2ETests : IAsyncLifetime
             }
         }
 
-        // Якщо хмарний сервер Render спить або Cloudflare видає Bot Challenge для IP-діапазонів датацентрів GitHub runner
         if (!loadedSuccessfully)
         {
             await _page.SetContentAsync(FallbackHtml, new PageSetContentOptions

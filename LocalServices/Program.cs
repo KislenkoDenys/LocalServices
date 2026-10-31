@@ -34,8 +34,9 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// B9: Кешування в оперативній пам'яті (IMemoryCache)
 builder.Services.AddMemoryCache();
+
+builder.Services.AddHttpClient<LocalServices.Services.ITelegramNotificationService, LocalServices.Services.TelegramNotificationService>();
 
 builder.Services.AddControllersWithViews(options =>
 {

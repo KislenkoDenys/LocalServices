@@ -1,5 +1,6 @@
 using LocalServices.Data;
 using LocalServices.Models;
+using LocalServices.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -7,10 +8,12 @@ using Microsoft.EntityFrameworkCore;
 public class ServicesController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly ITelegramNotificationService? _telegramService;
 
-    public ServicesController(ApplicationDbContext context)
+    public ServicesController(ApplicationDbContext context, ITelegramNotificationService? telegramService = null)
     {
         _context = context;
+        _telegramService = telegramService;
     }
 
     // GET: SERVICES
@@ -59,6 +62,13 @@ public class ServicesController : Controller
         {
             _context.Add(service);
             await _context.SaveChangesAsync();
+
+            if (_telegramService != null)
+            {
+                var fac = await _context.Facilities.FindAsync(service.FacilityId);
+                await _telegramService.SendServiceCreatedAsync(service, fac?.Name);
+            }
+
             return RedirectToAction(nameof(Index));
         }
         if (service.FacilityId > 0)

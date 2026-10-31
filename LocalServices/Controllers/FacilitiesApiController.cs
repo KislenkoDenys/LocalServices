@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using LocalServices.Models;
 using LocalServices.Data;
 using LocalServices.Infrastructure;
+using LocalServices.Services;
 
 [Route("api/[controller]")]
 [Route("api/facilities")]
@@ -13,15 +14,17 @@ public class FacilitiesApiController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly IMemoryCache _cache;
     private readonly ILogger<FacilitiesApiController>? _logger;
+    private readonly ITelegramNotificationService? _telegramService;
 
-    public FacilitiesApiController(ApplicationDbContext context, IMemoryCache? cache = null, ILogger<FacilitiesApiController>? logger = null)
+    public FacilitiesApiController(ApplicationDbContext context, IMemoryCache? cache = null, ILogger<FacilitiesApiController>? logger = null, ITelegramNotificationService? telegramService = null)
     {
         _context = context;
         _cache = cache ?? new MemoryCache(new MemoryCacheOptions());
         _logger = logger;
+        _telegramService = telegramService;
     }
 
-    // GET: api/facilities?skip=0&limit=10 (B1: Pagination API, B9: In-Memory Caching)
+    // GET: api/facilities?skip=0&limit=10
     [HttpGet]
     public async Task<ActionResult<PagedResult<Facility>>> GetFacilities([FromQuery] int skip = 0, [FromQuery] int limit = 10)
     {
@@ -29,7 +32,6 @@ public class FacilitiesApiController : ControllerBase
         if (limit < 1) limit = 10;
         if (limit > 100) limit = 100;
 
-        // B9: Перевірка кешу в оперативній пам'яті (IMemoryCache)
         if (!_cache.TryGetValue(CacheConstants.FacilitiesAllKey, out List<Facility>? allFacilities) || allFacilities == null)
         {
             allFacilities = await _context.Facilities
@@ -118,7 +120,6 @@ public class FacilitiesApiController : ControllerBase
         {
             await _context.SaveChangesAsync();
 
-            // B9: Інвалідація кешу при оновленні закладу
             InvalidateCache($"оновлення закладу ID={id}");
         }
         catch (DbUpdateConcurrencyException)
@@ -143,7 +144,6 @@ public class FacilitiesApiController : ControllerBase
         if (page < 1) page = 1;
         if (pageSize < 1 || pageSize > 50) pageSize = 10;
 
-        // Пошук виконується за умови введення щонайменше 3 символів
         if (string.IsNullOrWhiteSpace(term) || term.Trim().Length < 3)
         {
             return Ok(new
@@ -187,8 +187,13 @@ public class FacilitiesApiController : ControllerBase
         _context.Facilities.Add(facility);
         await _context.SaveChangesAsync();
 
-        // B9: Інвалідація кешу при створенні закладу
         InvalidateCache($"створення закладу «{facility.Name}»");
+
+        if (_telegramService != null)
+        {
+            var cat = await _context.Categories.FindAsync(facility.CategoryId);
+            await _telegramService.SendFacilityCreatedAsync(facility, cat?.Name);
+        }
 
         return CreatedAtAction(nameof(GetFacility), new { id = facility.Id }, facility);
     }
@@ -206,7 +211,6 @@ public class FacilitiesApiController : ControllerBase
         _context.Facilities.Remove(facility);
         await _context.SaveChangesAsync();
 
-        // B9: Інвалідація кешу при видаленні закладу
         InvalidateCache($"видалення закладу ID={id}");
 
         return NoContent();

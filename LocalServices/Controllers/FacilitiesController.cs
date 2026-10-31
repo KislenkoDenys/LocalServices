@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using LocalServices.Models;
 using LocalServices.Data;
 using LocalServices.Infrastructure;
+using LocalServices.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 public class FacilitiesController : Controller
@@ -11,12 +12,14 @@ public class FacilitiesController : Controller
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _hostEnvironment;
     private readonly IMemoryCache? _cache;
+    private readonly ITelegramNotificationService? _telegramService;
 
-    public FacilitiesController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment, IMemoryCache? cache = null)
+    public FacilitiesController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment, IMemoryCache? cache = null, ITelegramNotificationService? telegramService = null)
     {
         _context = context;
         _hostEnvironment = hostEnvironment;
         _cache = cache;
+        _telegramService = telegramService;
     }
 
     // GET: FACILITYS
@@ -96,6 +99,13 @@ public class FacilitiesController : Controller
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("[CACHE INVALIDATED] Кеш закладів очищено через веб-форму створення.");
             Console.ResetColor();
+
+            if (_telegramService != null)
+            {
+                var cat = await _context.Categories.FindAsync(facility.CategoryId);
+                await _telegramService.SendFacilityCreatedAsync(facility, cat?.Name);
+            }
+
             return RedirectToAction(nameof(Index));
         }
         if (facility.CategoryId > 0)

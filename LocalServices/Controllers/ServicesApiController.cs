@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LocalServices.Models;
 using LocalServices.Data;
+using LocalServices.Services;
 
 [Route("api/[controller]")]
 [Route("api/services")]
@@ -9,13 +10,15 @@ using LocalServices.Data;
 public class ServicesApiController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly ITelegramNotificationService? _telegramService;
 
-    public ServicesApiController(ApplicationDbContext context)
+    public ServicesApiController(ApplicationDbContext context, ITelegramNotificationService? telegramService = null)
     {
         _context = context;
+        _telegramService = telegramService;
     }
 
-    // GET: api/services?skip=0&limit=10 (B1: Pagination API)
+    // GET: api/services?skip=0&limit=10
     [HttpGet]
     public async Task<ActionResult<PagedResult<Service>>> GetServices([FromQuery] int skip = 0, [FromQuery] int limit = 10)
     {
@@ -108,6 +111,12 @@ public class ServicesApiController : ControllerBase
     {
         _context.Services.Add(service);
         await _context.SaveChangesAsync();
+
+        if (_telegramService != null)
+        {
+            var fac = await _context.Facilities.FindAsync(service.FacilityId);
+            await _telegramService.SendServiceCreatedAsync(service, fac?.Name);
+        }
 
         return CreatedAtAction(nameof(GetService), new { id = service.Id }, service);
     }

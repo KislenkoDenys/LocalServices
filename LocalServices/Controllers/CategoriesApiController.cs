@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using LocalServices.Models;
 using LocalServices.Data;
 using LocalServices.Infrastructure;
+using LocalServices.Services;
 
 [Route("api/[controller]")]
 [Route("api/categories")]
@@ -13,15 +14,21 @@ public class CategoriesApiController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly IMemoryCache _cache;
     private readonly ILogger<CategoriesApiController>? _logger;
+    private readonly ITelegramNotificationService? _telegramService;
 
-    public CategoriesApiController(ApplicationDbContext context, IMemoryCache? cache = null, ILogger<CategoriesApiController>? logger = null)
+    public CategoriesApiController(
+        ApplicationDbContext context,
+        IMemoryCache? cache = null,
+        ILogger<CategoriesApiController>? logger = null,
+        ITelegramNotificationService? telegramService = null)
     {
         _context = context;
         _cache = cache ?? new MemoryCache(new MemoryCacheOptions());
         _logger = logger;
+        _telegramService = telegramService;
     }
 
-    // GET: api/categories?skip=0&limit=10 (B1: Pagination API, B9: In-Memory Caching)
+    // GET: api/categories?skip=0&limit=10
     [HttpGet]
     public async Task<ActionResult<PagedResult<Category>>> GetCategories([FromQuery] int skip = 0, [FromQuery] int limit = 10)
     {
@@ -29,7 +36,6 @@ public class CategoriesApiController : ControllerBase
         if (limit < 1) limit = 10;
         if (limit > 100) limit = 100;
 
-        // B9: Перевірка кешу в пам'яті (IMemoryCache)
         if (!_cache.TryGetValue(CacheConstants.CategoriesAllKey, out List<Category>? allCategories) || allCategories == null)
         {
             allCategories = await _context.Categories
@@ -116,7 +122,6 @@ public class CategoriesApiController : ControllerBase
         {
             await _context.SaveChangesAsync();
 
-            // B9: Інвалідація кешу при оновленні категорії
             InvalidateCache($"оновлення категорії ID={id}");
         }
         catch (DbUpdateConcurrencyException)
@@ -141,7 +146,6 @@ public class CategoriesApiController : ControllerBase
         if (page < 1) page = 1;
         if (pageSize < 1 || pageSize > 50) pageSize = 10;
 
-        // Пошук виконується за умови введення щонайменше 3 символів
         if (string.IsNullOrWhiteSpace(term) || term.Trim().Length < 3)
         {
             return Ok(new
@@ -185,7 +189,11 @@ public class CategoriesApiController : ControllerBase
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
 
-        // B9: Інвалідація кешу при створенні категорії
+        if (_telegramService != null)
+        {
+            await _telegramService.SendCategoryCreatedAsync(category);
+        }
+
         InvalidateCache($"додавання категорії «{category.Name}»");
 
         return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category);
@@ -204,7 +212,6 @@ public class CategoriesApiController : ControllerBase
         _context.Categories.Remove(category);
         await _context.SaveChangesAsync();
 
-        // B9: Інвалідація кешу при видаленні категорії
         InvalidateCache($"видалення категорії ID={id}");
 
         return NoContent();
