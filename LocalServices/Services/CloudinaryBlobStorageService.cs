@@ -42,21 +42,23 @@ public class CloudinaryBlobStorageService : IBlobStorageService
     {
         if (file == null || file.Length == 0) return null;
 
+        await using var memoryStream = new MemoryStream();
+        await file.CopyToAsync(memoryStream);
+        var bytes = memoryStream.ToArray();
+
         if (_cloudinary == null)
         {
-            using var memoryStream = new MemoryStream();
-            await file.CopyToAsync(memoryStream);
-            var bytes = memoryStream.ToArray();
             var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
             return $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
         }
 
         try
         {
-            await using var stream = file.OpenReadStream();
+            using var uploadStream = new MemoryStream(bytes);
+            var fileName = string.IsNullOrWhiteSpace(file.FileName) ? "image.jpg" : Path.GetFileName(file.FileName);
             var uploadParams = new ImageUploadParams
             {
-                File = new FileDescription(file.FileName, stream),
+                File = new FileDescription(fileName, uploadStream),
                 Folder = $"localservices/{folder}",
                 Transformation = new Transformation().Quality("auto").FetchFormat("auto")
             };
@@ -65,16 +67,18 @@ public class CloudinaryBlobStorageService : IBlobStorageService
 
             if (uploadResult.Error != null)
             {
-                _logger?.LogError("Cloudinary upload failed: {Error}", uploadResult.Error.Message);
-                return null;
+                _logger?.LogError("Cloudinary upload failed: {Error}, falling back to base64", uploadResult.Error.Message);
+                var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
+                return $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
             }
 
             return uploadResult.SecureUrl?.ToString() ?? uploadResult.Url?.ToString();
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Exception while uploading to Cloudinary");
-            return null;
+            _logger?.LogError(ex, "Exception while uploading to Cloudinary, falling back to base64");
+            var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
+            return $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
         }
     }
 
