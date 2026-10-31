@@ -1,0 +1,384 @@
+@{
+    ViewData["Title"] = "Нотатки";
+}
+
+<div class="container py-4" style="max-width: 900px;">
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <div>
+            <h1 class="h3 fw-bold mb-0">Нотатки</h1>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span id="saveStatus" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small">
+                Збережено в LocalStorage
+            </span>
+            <button id="btnClearDoc" class="btn btn-outline-danger btn-sm" title="Очистити документ">
+                Очистити
+            </button>
+        </div>
+    </div>
+
+    <!-- Заголовок документа -->
+    <div class="mb-4">
+        <input type="text" id="docTitle" class="form-control form-control-lg fw-bold border-0 px-2 py-1 shadow-none" 
+               placeholder="Заголовок документа..." style="font-size: 1.8rem; background: transparent;" />
+    </div>
+
+    <!-- Контейнер блоків Notion-стилю -->
+    <div id="blocksContainer" class="d-flex flex-column gap-2 mb-4">
+        <!-- Блоки генеруються динамічно через JS -->
+    </div>
+
+    <!-- Кнопка додавання нового блоку -->
+    <div class="pt-2 border-top">
+        <button id="btnAddBlock" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+            + Додати блок
+        </button>
+    </div>
+</div>
+
+<style>
+    .notion-block {
+        position: relative;
+        padding: 6px 10px;
+        border-radius: 6px;
+        transition: background-color 0.15s ease;
+        border: 1px solid transparent;
+    }
+    .notion-block:hover {
+        background-color: #f8f9fa;
+        border-color: #e9ecef;
+    }
+    .notion-block:focus-within {
+        background-color: #ffffff;
+        border-color: #dee2e6;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .notion-handle {
+        cursor: grab;
+        color: #adb5bd;
+        opacity: 0.3;
+        transition: opacity 0.15s ease;
+        user-select: none;
+    }
+    .notion-block:hover .notion-handle {
+        opacity: 1;
+    }
+    .notion-handle:active {
+        cursor: grabbing;
+    }
+    .block-content {
+        outline: none;
+        word-break: break-word;
+        min-height: 24px;
+    }
+    .block-content[placeholder]:empty:before {
+        content: attr(placeholder);
+        color: #adb5bd;
+        cursor: text;
+    }
+    .block-h1 { font-size: 1.5rem; font-weight: 700; color: #212529; }
+    .block-h2 { font-size: 1.25rem; font-weight: 600; color: #343a40; }
+    .block-quote { border-left: 3px solid #6c757d; padding-left: 12px; color: #495057; font-style: italic; }
+    .block-code { font-family: monospace; background: #f1f3f5; padding: 6px 10px; border-radius: 4px; font-size: 0.9rem; }
+    .block-bullet:before { content: "• "; font-weight: bold; color: #6c757d; }
+    .todo-checkbox { cursor: pointer; width: 1.15rem; height: 1.15rem; flex-shrink: 0; margin-top: 3px !important; }
+    .todo-done { text-decoration: line-through; color: #6c757d; }
+    .dragging { opacity: 0.4; background-color: #e7f5ff !important; border: 1px dashed #339af0 !important; }
+</style>
+
+@section Scripts {
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const STORAGE_KEY = "localservices_notion_notes_v1";
+    const container = document.getElementById("blocksContainer");
+    const docTitle = document.getElementById("docTitle");
+    const saveStatus = document.getElementById("saveStatus");
+
+    let documentState = {
+        title: "План розвитку закладу",
+        blocks: []
+    };
+
+    const DEFAULT_BLOCKS = [
+        { id: "b1", type: "h1", content: "Стратегічний план закладу" },
+        { id: "b2", type: "paragraph", content: "Цей документ створено в динамічному **Markdown-редакторі**. Усі зміни зберігаються автоматично в пам'ять браузера (localStorage)." },
+        { id: "b3", type: "h2", content: "Першочергові завдання" },
+        { id: "b4", type: "todo", content: "Підключити онлайн-бронювання послуг", checked: true },
+        { id: "b5", type: "todo", content: "Оновити фотографії інтер'єру в Cloudinary", checked: true },
+        { id: "b6", type: "todo", content: "Узгодити новий графік роботи у вихідні", checked: false },
+        { id: "b7", type: "quote", content: "«Клієнтський досвід починається з першого кліку на сайті»." },
+        { id: "b8", type: "bullet", content: "Категорія закладу: Ресторани та кафе" },
+        { id: "b9", type: "bullet", content: "Пріоритет: Високий" }
+    ];
+
+    function loadFromStorage() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+            try {
+                documentState = JSON.parse(raw);
+            } catch (e) {
+                documentState = { title: "Мої нотатки", blocks: DEFAULT_BLOCKS };
+            }
+        } else {
+            documentState = { title: "План розвитку закладу", blocks: DEFAULT_BLOCKS };
+        }
+        docTitle.value = documentState.title || "";
+        renderBlocks();
+    }
+
+    let saveTimeout = null;
+    function saveToStorage() {
+        documentState.title = docTitle.value;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(documentState));
+        
+        saveStatus.textContent = "Збережено о " + new Date().toLocaleTimeString();
+        saveStatus.classList.remove("bg-secondary-subtle", "text-secondary", "border-secondary-subtle");
+        saveStatus.classList.add("bg-success-subtle", "text-success", "border-success-subtle");
+    }
+
+    function triggerSave() {
+        saveStatus.textContent = "Збереження...";
+        saveStatus.classList.remove("bg-success-subtle", "text-success", "border-success-subtle");
+        saveStatus.classList.add("bg-secondary-subtle", "text-secondary", "border-secondary-subtle");
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveToStorage, 350);
+    }
+
+    docTitle.addEventListener("input", triggerSave);
+
+    function createBlockElement(block) {
+        const div = document.createElement("div");
+        div.className = "notion-block d-flex align-items-start gap-2";
+        div.setAttribute("draggable", "true");
+        div.dataset.id = block.id;
+
+        // Ручка перетягування (Drag-n-Drop F3)
+        const handle = document.createElement("span");
+        handle.className = "notion-handle mt-1";
+        handle.innerHTML = "⋮⋮";
+        handle.title = "Перетягніть для сортування";
+
+        // Селектор типу блоку
+        const select = document.createElement("select");
+        select.className = "form-select form-select-sm border-0 bg-transparent text-muted p-0 mt-1";
+        select.style.width = "75px";
+        select.style.fontSize = "0.75rem";
+        select.innerHTML = `
+            <option value="paragraph" ${block.type === 'paragraph' ? 'selected' : ''}>Текст</option>
+            <option value="h1" ${block.type === 'h1' ? 'selected' : ''}>H1</option>
+            <option value="h2" ${block.type === 'h2' ? 'selected' : ''}>H2</option>
+            <option value="todo" ${block.type === 'todo' ? 'selected' : ''}>Чекбокс</option>
+            <option value="bullet" ${block.type === 'bullet' ? 'selected' : ''}>Список</option>
+            <option value="quote" ${block.type === 'quote' ? 'selected' : ''}>Цитата</option>
+            <option value="code" ${block.type === 'code' ? 'selected' : ''}>Код</option>
+        `;
+        select.addEventListener("change", function () {
+            block.type = this.value;
+            renderBlocks();
+            triggerSave();
+            setTimeout(() => {
+                const el = container.querySelector(`[data-id="${block.id}"] .block-content`);
+                if (el) el.focus();
+            }, 20);
+        });
+
+        // Контент блоку
+        const contentContainer = document.createElement("div");
+        contentContainer.className = "flex-grow-1 d-flex align-items-start gap-2";
+
+        let checkbox = null;
+        if (block.type === "todo") {
+            checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.className = "form-check-input todo-checkbox mt-1";
+            checkbox.checked = !!block.checked;
+            checkbox.addEventListener("change", function () {
+                block.checked = this.checked;
+                if (this.checked) contentEl.classList.add("todo-done");
+                else contentEl.classList.remove("todo-done");
+                triggerSave();
+            });
+            contentContainer.appendChild(checkbox);
+        }
+
+        const contentEl = document.createElement("div");
+        contentEl.className = "block-content flex-grow-1";
+        contentEl.contentEditable = "true";
+        contentEl.setAttribute("placeholder", getPlaceholder(block.type));
+        contentEl.textContent = block.content || "";
+
+        applyBlockTypeStyles(contentEl, block);
+        if (block.type === "todo" && block.checked) {
+            contentEl.classList.add("todo-done");
+        }
+
+        contentEl.addEventListener("input", function () {
+            block.content = this.innerText;
+            triggerSave();
+        });
+
+        contentEl.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                addNewBlockAfter(block.id);
+            } else if (e.key === "Backspace" && this.innerText.trim() === "" && documentState.blocks.length > 1) {
+                e.preventDefault();
+                deleteBlock(block.id);
+            }
+        });
+
+        contentContainer.appendChild(contentEl);
+
+        // Кнопка видалення
+        const btnDelete = document.createElement("button");
+        btnDelete.className = "btn btn-link text-danger p-0 mt-1 text-decoration-none";
+        btnDelete.innerHTML = "×";
+        btnDelete.style.fontSize = "1.2rem";
+        btnDelete.style.lineHeight = "1";
+        btnDelete.title = "Видалити блок";
+        btnDelete.addEventListener("click", function () {
+            deleteBlock(block.id);
+        });
+
+        div.appendChild(handle);
+        div.appendChild(select);
+        div.appendChild(contentContainer);
+        div.appendChild(btnDelete);
+
+        // Drag and Drop події (F3)
+        div.addEventListener("dragstart", function (e) {
+            div.classList.add("dragging");
+            e.dataTransfer.setData("text/plain", block.id);
+        });
+
+        div.addEventListener("dragend", function () {
+            div.classList.remove("dragging");
+            updateBlocksOrderFromDOM();
+        });
+
+        return div;
+    }
+
+    function applyBlockTypeStyles(el, block) {
+        el.className = "block-content flex-grow-1";
+        if (block.type === "h1") el.classList.add("block-h1");
+        else if (block.type === "h2") el.classList.add("block-h2");
+        else if (block.type === "quote") el.classList.add("block-quote");
+        else if (block.type === "code") el.classList.add("block-code");
+        else if (block.type === "bullet") el.classList.add("block-bullet");
+        el.setAttribute("placeholder", getPlaceholder(block.type));
+    }
+
+    function getPlaceholder(type) {
+        switch (type) {
+            case "h1": return "Заголовок 1...";
+            case "h2": return "Заголовок 2...";
+            case "todo": return "Завдання...";
+            case "quote": return "Цитата...";
+            case "code": return "Введіть код...";
+            case "bullet": return "Елемент списку...";
+            default: return "Введіть текст (підтримується Markdown)...";
+        }
+    }
+
+    function renderBlocks() {
+        container.innerHTML = "";
+        documentState.blocks.forEach(block => {
+            container.appendChild(createBlockElement(block));
+        });
+    }
+
+    function addNewBlockAfter(afterId, type = "paragraph") {
+        const newBlock = {
+            id: "b_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+            type: type,
+            content: ""
+        };
+        const idx = documentState.blocks.findIndex(b => b.id === afterId);
+        if (idx !== -1) {
+            documentState.blocks.splice(idx + 1, 0, newBlock);
+        } else {
+            documentState.blocks.push(newBlock);
+        }
+        renderBlocks();
+        triggerSave();
+
+        // Фокус на новому блоці
+        setTimeout(() => {
+            const el = container.querySelector(`[data-id="${newBlock.id}"] .block-content`);
+            if (el) el.focus();
+        }, 30);
+    }
+
+    function deleteBlock(id) {
+        if (documentState.blocks.length <= 1) {
+            documentState.blocks[0].content = "";
+            renderBlocks();
+            triggerSave();
+            return;
+        }
+        const idx = documentState.blocks.findIndex(b => b.id === id);
+        documentState.blocks = documentState.blocks.filter(b => b.id !== id);
+        renderBlocks();
+        triggerSave();
+
+        // Фокус на сусідньому блоці
+        setTimeout(() => {
+            const targetIdx = Math.max(0, idx - 1);
+            const nextBlock = documentState.blocks[targetIdx];
+            if (nextBlock) {
+                const el = container.querySelector(`[data-id="${nextBlock.id}"] .block-content`);
+                if (el) el.focus();
+            }
+        }, 30);
+    }
+
+    function updateBlocksOrderFromDOM() {
+        const domBlocks = Array.from(container.children);
+        const newBlocks = [];
+        domBlocks.forEach(el => {
+            const id = el.dataset.id;
+            const item = documentState.blocks.find(b => b.id === id);
+            if (item) newBlocks.push(item);
+        });
+        documentState.blocks = newBlocks;
+        triggerSave();
+    }
+
+    // Drag-over для сортування контейнера (F3 Drag & Drop)
+    container.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        const draggingEl = container.querySelector(".dragging");
+        if (!draggingEl) return;
+
+        const siblings = Array.from(container.querySelectorAll(".notion-block:not(.dragging)"));
+        const nextSibling = siblings.find(sibling => {
+            const box = sibling.getBoundingClientRect();
+            return e.clientY <= box.top + box.height / 2;
+        });
+
+        container.insertBefore(draggingEl, nextSibling);
+    });
+
+    document.getElementById("btnAddBlock").addEventListener("click", function () {
+        addNewBlockAfter(null, "paragraph");
+    });
+
+    document.getElementById("btnClearDoc").addEventListener("click", function () {
+        if (confirm("Ви дійсно хочете очистити нотатки? Усі блоки буде видалено.")) {
+            documentState = {
+                title: "Новий документ",
+                blocks: [{ id: "b1", type: "paragraph", content: "" }]
+            };
+            docTitle.value = documentState.title;
+            renderBlocks();
+            triggerSave();
+        }
+    });
+
+    // Початкове завантаження
+    loadFromStorage();
+});
+</script>
+}
+
