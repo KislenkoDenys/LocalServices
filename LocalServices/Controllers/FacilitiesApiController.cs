@@ -15,14 +15,44 @@ public class FacilitiesApiController : ControllerBase
         _context = context;
     }
 
-    // GET: api/Facility
+    // GET: api/facilities?skip=0&limit=10 (B1: Pagination API)
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Facility>>> GetFacilities()
+    public async Task<ActionResult<PagedResult<Facility>>> GetFacilities([FromQuery] int skip = 0, [FromQuery] int limit = 10)
     {
-        return await _context.Facilities
+        if (skip < 0) skip = 0;
+        if (limit < 1) limit = 10;
+        if (limit > 100) limit = 100;
+
+        var query = _context.Facilities
             .Include(f => f.Category)
             .Include(f => f.Services)
+            .AsQueryable();
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderBy(f => f.Id)
+            .Skip(skip)
+            .Take(limit)
             .ToListAsync();
+
+        var path = Request?.Path.Value ?? "/api/facilities";
+        string? nextLink = (skip + limit < totalCount) ? $"{path}?skip={skip + limit}&limit={limit}" : null;
+        string? prevLink = (skip > 0) ? $"{path}?skip={Math.Max(0, skip - limit)}&limit={limit}" : null;
+
+        var result = new PagedResult<Facility>
+        {
+            TotalCount = totalCount,
+            Skip = skip,
+            Limit = limit,
+            TotalPages = (int)Math.Ceiling((double)totalCount / limit),
+            HasNextPage = nextLink != null,
+            HasPreviousPage = prevLink != null,
+            NextLink = nextLink,
+            PreviousLink = prevLink,
+            Items = items
+        };
+
+        return Ok(result);
     }
 
     // GET: api/Facility/5

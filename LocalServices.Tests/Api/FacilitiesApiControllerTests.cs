@@ -7,7 +7,7 @@ namespace LocalServices.Tests.Api;
 public class FacilitiesApiControllerTests
 {
     [Fact]
-    public async Task GetFacilities_ReturnsAllFacilities()
+    public async Task GetFacilities_ReturnsPagedResult_WithDefaults()
     {
         using var context = TestDbContextFactory.Create();
         var cat = new Category { Name = "Категорія" };
@@ -22,10 +22,55 @@ public class FacilitiesApiControllerTests
 
         var controller = new FacilitiesApiController(context);
 
-        var result = await controller.GetFacilities();
+        var actionResult = await controller.GetFacilities();
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var pagedResult = Assert.IsType<PagedResult<Facility>>(okResult.Value);
 
-        Assert.NotNull(result.Value);
-        Assert.Equal(2, result.Value.Count());
+        Assert.Equal(2, pagedResult.TotalCount);
+        Assert.Equal(2, pagedResult.Items.Count());
+        Assert.Equal(0, pagedResult.Skip);
+        Assert.Equal(10, pagedResult.Limit);
+        Assert.False(pagedResult.HasNextPage);
+        Assert.Null(pagedResult.NextLink);
+    }
+
+    [Fact]
+    public async Task GetFacilities_SupportsPagination_WithNextAndPreviousLinks()
+    {
+        using var context = TestDbContextFactory.Create();
+        var cat = new Category { Name = "Категорія" };
+        context.Categories.Add(cat);
+        await context.SaveChangesAsync();
+
+        for (int i = 1; i <= 25; i++)
+        {
+            context.Facilities.Add(new Facility { Name = $"Заклад {i}", CategoryId = cat.Id });
+        }
+        await context.SaveChangesAsync();
+
+        var controller = new FacilitiesApiController(context);
+
+        // Сторінка 1
+        var page1Result = await controller.GetFacilities(skip: 0, limit: 10);
+        var page1 = Assert.IsType<PagedResult<Facility>>(((OkObjectResult)page1Result.Result!).Value);
+
+        Assert.Equal(25, page1.TotalCount);
+        Assert.Equal(10, page1.Items.Count());
+        Assert.True(page1.HasNextPage);
+        Assert.False(page1.HasPreviousPage);
+        Assert.NotNull(page1.NextLink);
+        Assert.Contains("skip=10&limit=10", page1.NextLink);
+        Assert.Null(page1.PreviousLink);
+
+        // Сторінка 2
+        var page2Result = await controller.GetFacilities(skip: 10, limit: 10);
+        var page2 = Assert.IsType<PagedResult<Facility>>(((OkObjectResult)page2Result.Result!).Value);
+
+        Assert.Equal(10, page2.Items.Count());
+        Assert.True(page2.HasNextPage);
+        Assert.True(page2.HasPreviousPage);
+        Assert.Contains("skip=20&limit=10", page2.NextLink!);
+        Assert.Contains("skip=0&limit=10", page2.PreviousLink!);
     }
 
     [Fact]

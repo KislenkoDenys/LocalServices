@@ -15,7 +15,7 @@
     </div>
 
     <form asp-action="Create" enctype="multipart/form-data">
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <div asp-validation-summary="All" class="alert alert-danger mb-3" style="@(ViewData.ModelState.IsValid ? "display:none;" : "")"></div>
 
         <div class="row g-4">
             <div class="col-lg-6">
@@ -56,11 +56,11 @@
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="CategoryId" class="form-label fw-medium">Категорія</label>
+                            <label asp-for="CategoryId" class="form-label fw-medium">Категорія <span class="text-danger">*</span></label>
                             @{
                                 var selectedCategoryName = ViewBag.SelectedCategoryName as string;
                             }
-                            <select asp-for="CategoryId" id="categorySelect" class="form-select">
+                            <select asp-for="CategoryId" id="categorySelect" class="form-select" required>
                                 @if (!string.IsNullOrEmpty(selectedCategoryName) && Model != null && Model.CategoryId > 0)
                                 {
                                     <option value="@Model.CategoryId" selected>@selectedCategoryName</option>

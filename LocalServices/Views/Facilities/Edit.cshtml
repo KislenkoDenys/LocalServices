@@ -15,7 +15,7 @@
     </div>
 
     <form asp-action="Edit" enctype="multipart/form-data">
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <div asp-validation-summary="All" class="alert alert-danger mb-3" style="@(ViewData.ModelState.IsValid ? "display:none;" : "")"></div>
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="ImagePath" />
 

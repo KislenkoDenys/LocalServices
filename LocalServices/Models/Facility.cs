@@ -41,6 +41,7 @@ namespace LocalServices.Models
         public IFormFile? ImageFile { get; set; }
 
         [Display(Name = "Категорія")]
+        [Range(1, int.MaxValue, ErrorMessage = "Будь ласка, оберіть категорію зі списку.")]
         public int CategoryId { get; set; }
 
         [Display(Name = "Категорія")]

@@ -14,7 +14,7 @@
 <div class="row">
     <div class="col-md-5">
         <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div asp-validation-summary="All" class="alert alert-danger mb-3" style="@(ViewData.ModelState.IsValid ? "display:none;" : "")"></div>
             <input type="hidden" asp-for="Id" />
 
             <div class="form-group mb-3">

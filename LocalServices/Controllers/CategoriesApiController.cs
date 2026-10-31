@@ -15,13 +15,43 @@ public class CategoriesApiController : ControllerBase
         _context = context;
     }
 
-    // GET: api/Category
+    // GET: api/categories?skip=0&limit=10 (B1: Pagination API)
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
+    public async Task<ActionResult<PagedResult<Category>>> GetCategories([FromQuery] int skip = 0, [FromQuery] int limit = 10)
     {
-        return await _context.Categories
+        if (skip < 0) skip = 0;
+        if (limit < 1) limit = 10;
+        if (limit > 100) limit = 100;
+
+        var query = _context.Categories
             .Include(c => c.Facilities)
+            .AsQueryable();
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderBy(c => c.Id)
+            .Skip(skip)
+            .Take(limit)
             .ToListAsync();
+
+        var path = Request?.Path.Value ?? "/api/categories";
+        string? nextLink = (skip + limit < totalCount) ? $"{path}?skip={skip + limit}&limit={limit}" : null;
+        string? prevLink = (skip > 0) ? $"{path}?skip={Math.Max(0, skip - limit)}&limit={limit}" : null;
+
+        var result = new PagedResult<Category>
+        {
+            TotalCount = totalCount,
+            Skip = skip,
+            Limit = limit,
+            TotalPages = (int)Math.Ceiling((double)totalCount / limit),
+            HasNextPage = nextLink != null,
+            HasPreviousPage = prevLink != null,
+            NextLink = nextLink,
+            PreviousLink = prevLink,
+            Items = items
+        };
+
+        return Ok(result);
     }
 
     // GET: api/Category/5

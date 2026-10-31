@@ -13,6 +13,7 @@ namespace LocalServices.Models
         public decimal Price { get; set; }
 
         [Display(Name = "Заклад")]
+        [Range(1, int.MaxValue, ErrorMessage = "Будь ласка, оберіть заклад зі списку.")]
         public int FacilityId { get; set; }
 
         [Display(Name = "Заклад")]

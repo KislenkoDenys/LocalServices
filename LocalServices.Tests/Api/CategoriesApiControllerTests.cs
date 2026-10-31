@@ -7,7 +7,7 @@ namespace LocalServices.Tests.Api;
 public class CategoriesApiControllerTests
 {
     [Fact]
-    public async Task GetCategories_ReturnsAllCategories()
+    public async Task GetCategories_ReturnsPagedResult_WithDefaults()
     {
         using var context = TestDbContextFactory.Create();
         context.Categories.AddRange(
@@ -18,10 +18,37 @@ public class CategoriesApiControllerTests
 
         var controller = new CategoriesApiController(context);
 
-        var result = await controller.GetCategories();
+        var actionResult = await controller.GetCategories();
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var pagedResult = Assert.IsType<PagedResult<Category>>(okResult.Value);
 
-        Assert.NotNull(result.Value);
-        Assert.Equal(2, result.Value.Count());
+        Assert.Equal(2, pagedResult.TotalCount);
+        Assert.Equal(2, pagedResult.Items.Count());
+        Assert.Equal(0, pagedResult.Skip);
+        Assert.Equal(10, pagedResult.Limit);
+    }
+
+    [Fact]
+    public async Task GetCategories_SupportsPagination_AndNextLink()
+    {
+        using var context = TestDbContextFactory.Create();
+        for (int i = 1; i <= 15; i++)
+        {
+            context.Categories.Add(new Category { Name = $"Категорія {i}" });
+        }
+        await context.SaveChangesAsync();
+
+        var controller = new CategoriesApiController(context);
+
+        var actionResult = await controller.GetCategories(skip: 0, limit: 5);
+        var pagedResult = Assert.IsType<PagedResult<Category>>(((OkObjectResult)actionResult.Result!).Value);
+
+        Assert.Equal(15, pagedResult.TotalCount);
+        Assert.Equal(5, pagedResult.Items.Count());
+        Assert.Equal(3, pagedResult.TotalPages);
+        Assert.True(pagedResult.HasNextPage);
+        Assert.NotNull(pagedResult.NextLink);
+        Assert.Contains("skip=5&limit=5", pagedResult.NextLink);
     }
 
     [Fact]

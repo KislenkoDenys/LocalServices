@@ -7,7 +7,7 @@ namespace LocalServices.Tests.Api;
 public class ServicesApiControllerTests
 {
     [Fact]
-    public async Task GetServices_ReturnsAllServices()
+    public async Task GetServices_ReturnsPagedResult_WithDefaults()
     {
         using var context = TestDbContextFactory.Create();
         var cat = new Category { Name = "Категорія" };
@@ -26,10 +26,45 @@ public class ServicesApiControllerTests
 
         var controller = new ServicesApiController(context);
 
-        var result = await controller.GetServices();
+        var actionResult = await controller.GetServices();
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var pagedResult = Assert.IsType<PagedResult<Service>>(okResult.Value);
 
-        Assert.NotNull(result.Value);
-        Assert.Equal(2, result.Value.Count());
+        Assert.Equal(2, pagedResult.TotalCount);
+        Assert.Equal(2, pagedResult.Items.Count());
+        Assert.Equal(0, pagedResult.Skip);
+        Assert.Equal(10, pagedResult.Limit);
+    }
+
+    [Fact]
+    public async Task GetServices_SupportsPagination_AndNextLink()
+    {
+        using var context = TestDbContextFactory.Create();
+        var cat = new Category { Name = "Категорія" };
+        context.Categories.Add(cat);
+        await context.SaveChangesAsync();
+
+        var fac = new Facility { Name = "Заклад", CategoryId = cat.Id };
+        context.Facilities.Add(fac);
+        await context.SaveChangesAsync();
+
+        for (int i = 1; i <= 15; i++)
+        {
+            context.Services.Add(new Service { Name = $"Послуга {i}", Price = i * 10, FacilityId = fac.Id });
+        }
+        await context.SaveChangesAsync();
+
+        var controller = new ServicesApiController(context);
+
+        var actionResult = await controller.GetServices(skip: 0, limit: 5);
+        var pagedResult = Assert.IsType<PagedResult<Service>>(((OkObjectResult)actionResult.Result!).Value);
+
+        Assert.Equal(15, pagedResult.TotalCount);
+        Assert.Equal(5, pagedResult.Items.Count());
+        Assert.Equal(3, pagedResult.TotalPages);
+        Assert.True(pagedResult.HasNextPage);
+        Assert.NotNull(pagedResult.NextLink);
+        Assert.Contains("skip=5&limit=5", pagedResult.NextLink);
     }
 
     [Fact]
