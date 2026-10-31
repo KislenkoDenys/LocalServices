@@ -38,6 +38,8 @@ builder.Services.AddMemoryCache();
 
 builder.Services.AddHttpClient<LocalServices.Services.ITelegramNotificationService, LocalServices.Services.TelegramNotificationService>();
 
+builder.Services.AddScoped<LocalServices.Services.IBlobStorageService, LocalServices.Services.CloudinaryBlobStorageService>();
+
 builder.Services.AddControllersWithViews(options =>
 {
     options.ModelBinderProviders.Insert(0, new LocalServices.Infrastructure.InvariantDecimalModelBinderProvider());

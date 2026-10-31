@@ -13,13 +13,20 @@ public class FacilitiesController : Controller
     private readonly IWebHostEnvironment _hostEnvironment;
     private readonly IMemoryCache? _cache;
     private readonly ITelegramNotificationService? _telegramService;
+    private readonly IBlobStorageService? _blobStorageService;
 
-    public FacilitiesController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment, IMemoryCache? cache = null, ITelegramNotificationService? telegramService = null)
+    public FacilitiesController(
+        ApplicationDbContext context,
+        IWebHostEnvironment hostEnvironment,
+        IMemoryCache? cache = null,
+        ITelegramNotificationService? telegramService = null,
+        IBlobStorageService? blobStorageService = null)
     {
         _context = context;
         _hostEnvironment = hostEnvironment;
         _cache = cache;
         _telegramService = telegramService;
+        _blobStorageService = blobStorageService;
     }
 
     // GET: FACILITYS
@@ -86,11 +93,22 @@ public class FacilitiesController : Controller
         {
             if (facility.ImageFile != null)
             {
-                using (var memoryStream = new MemoryStream())
+                if (_blobStorageService != null)
                 {
-                    await facility.ImageFile.CopyToAsync(memoryStream);
-                    var bytes = memoryStream.ToArray();
-                    facility.ImagePath = $"data:{facility.ImageFile.ContentType};base64,{Convert.ToBase64String(bytes)}";
+                    var uploadedUrl = await _blobStorageService.UploadImageAsync(facility.ImageFile);
+                    if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                    {
+                        facility.ImagePath = uploadedUrl;
+                    }
+                }
+                else
+                {
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        await facility.ImageFile.CopyToAsync(memoryStream);
+                        var bytes = memoryStream.ToArray();
+                        facility.ImagePath = $"data:{facility.ImageFile.ContentType};base64,{Convert.ToBase64String(bytes)}";
+                    }
                 }
             }
             _context.Add(facility);
@@ -165,11 +183,22 @@ public class FacilitiesController : Controller
             {
                 if (facility.ImageFile != null)
                 {
-                    using (var memoryStream = new MemoryStream())
+                    if (_blobStorageService != null)
                     {
-                        await facility.ImageFile.CopyToAsync(memoryStream);
-                        var bytes = memoryStream.ToArray();
-                        facility.ImagePath = $"data:{facility.ImageFile.ContentType};base64,{Convert.ToBase64String(bytes)}";
+                        var uploadedUrl = await _blobStorageService.UploadImageAsync(facility.ImageFile);
+                        if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                        {
+                            facility.ImagePath = uploadedUrl;
+                        }
+                    }
+                    else
+                    {
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            await facility.ImageFile.CopyToAsync(memoryStream);
+                            var bytes = memoryStream.ToArray();
+                            facility.ImagePath = $"data:{facility.ImageFile.ContentType};base64,{Convert.ToBase64String(bytes)}";
+                        }
                     }
                 }
 

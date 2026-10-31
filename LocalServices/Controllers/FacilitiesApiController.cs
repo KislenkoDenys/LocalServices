@@ -15,13 +15,20 @@ public class FacilitiesApiController : ControllerBase
     private readonly IMemoryCache _cache;
     private readonly ILogger<FacilitiesApiController>? _logger;
     private readonly ITelegramNotificationService? _telegramService;
+    private readonly IBlobStorageService? _blobStorageService;
 
-    public FacilitiesApiController(ApplicationDbContext context, IMemoryCache? cache = null, ILogger<FacilitiesApiController>? logger = null, ITelegramNotificationService? telegramService = null)
+    public FacilitiesApiController(
+        ApplicationDbContext context,
+        IMemoryCache? cache = null,
+        ILogger<FacilitiesApiController>? logger = null,
+        ITelegramNotificationService? telegramService = null,
+        IBlobStorageService? blobStorageService = null)
     {
         _context = context;
         _cache = cache ?? new MemoryCache(new MemoryCacheOptions());
         _logger = logger;
         _telegramService = telegramService;
+        _blobStorageService = blobStorageService;
     }
 
     // GET: api/facilities?skip=0&limit=10
@@ -196,6 +203,29 @@ public class FacilitiesApiController : ControllerBase
         }
 
         return CreatedAtAction(nameof(GetFacility), new { id = facility.Id }, facility);
+    }
+
+    // POST: api/facilities/upload-image
+    [HttpPost("upload-image")]
+    public async Task<IActionResult> UploadImage([FromForm] IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest("Файл не надано.");
+        }
+
+        if (_blobStorageService == null)
+        {
+            return StatusCode(500, "Сервіс збереження файлів не налаштовано.");
+        }
+
+        var url = await _blobStorageService.UploadImageAsync(file);
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return StatusCode(500, "Не вдалося завантажити зображення в Blob Storage.");
+        }
+
+        return Ok(new { url });
     }
 
     // DELETE: api/Facility/5
