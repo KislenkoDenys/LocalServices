@@ -41,6 +41,8 @@ builder.Services.AddHttpClient<LocalServices.Services.ITelegramNotificationServi
 builder.Services.AddScoped<LocalServices.Services.IBlobStorageService, LocalServices.Services.CloudinaryBlobStorageService>();
 builder.Services.AddScoped<LocalServices.Services.IPdfExportService, LocalServices.Services.PdfExportService>();
 
+builder.Services.AddSignalR();
+
 builder.Services.AddControllersWithViews(options =>
 {
     options.ModelBinderProviders.Insert(0, new LocalServices.Infrastructure.InvariantDecimalModelBinderProvider());
@@ -142,5 +144,7 @@ app.MapControllerRoute(
 
 app.MapRazorPages()
    .WithStaticAssets();
+
+app.MapHub<LocalServices.Hubs.NotesHub>("/hubs/notes");
 
 app.Run();

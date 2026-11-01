@@ -8,6 +8,9 @@
             <h1 class="h3 fw-bold mb-0">Нотатки</h1>
         </div>
         <div class="d-flex align-items-center gap-2">
+            <span id="syncStatus" class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 small">
+                Підключення до синхронізації...
+            </span>
             <span id="saveStatus" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small">
                 Збережено в LocalStorage
             </span>
@@ -83,12 +86,16 @@
 </style>
 
 @section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const STORAGE_KEY = "localservices_notion_notes_v1";
     const container = document.getElementById("blocksContainer");
     const docTitle = document.getElementById("docTitle");
     const saveStatus = document.getElementById("saveStatus");
+    const syncStatus = document.getElementById("syncStatus");
+
+    const clientId = "client_" + Math.random().toString(36).substring(2, 9);
 
     let documentState = {
         title: "План розвитку закладу",
@@ -123,13 +130,25 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     let saveTimeout = null;
-    function saveToStorage() {
+    function saveToStorage(broadcast = true) {
         documentState.title = docTitle.value;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(documentState));
         
         saveStatus.textContent = "Збережено о " + new Date().toLocaleTimeString();
         saveStatus.classList.remove("bg-secondary-subtle", "text-secondary", "border-secondary-subtle");
         saveStatus.classList.add("bg-success-subtle", "text-success", "border-success-subtle");
+
+        if (broadcast && hubConnection && hubConnection.state === signalR.HubConnectionState.Connected) {
+            const payload = {
+                senderId: clientId,
+                title: documentState.title,
+                blocks: documentState.blocks,
+                timestamp: Date.now()
+            };
+            hubConnection.invoke("UpdateDocument", JSON.stringify(payload)).catch(function (err) {
+                console.error(err);
+            });
+        }
     }
 
     function triggerSave() {
@@ -137,7 +156,9 @@ document.addEventListener("DOMContentLoaded", function () {
         saveStatus.classList.remove("bg-success-subtle", "text-success", "border-success-subtle");
         saveStatus.classList.add("bg-secondary-subtle", "text-secondary", "border-secondary-subtle");
         clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(saveToStorage, 350);
+        saveTimeout = setTimeout(function () {
+            saveToStorage(true);
+        }, 250);
     }
 
     docTitle.addEventListener("input", triggerSave);
@@ -365,6 +386,104 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     loadFromStorage();
+
+    const hubConnection = new signalR.HubConnectionBuilder()
+        .withUrl("/hubs/notes")
+        .withAutomaticReconnect()
+        .build();
+
+    hubConnection.on("ReceiveDocumentUpdate", function (rawJson) {
+        try {
+            const data = JSON.parse(rawJson);
+            if (!data || data.senderId === clientId) return;
+
+            const currentTitle = docTitle.value;
+            const titleChanged = data.title !== undefined && data.title !== currentTitle;
+            const blocksChanged = JSON.stringify(data.blocks) !== JSON.stringify(documentState.blocks);
+
+            if (!titleChanged && !blocksChanged) return;
+
+            if (titleChanged) {
+                documentState.title = data.title;
+                if (document.activeElement !== docTitle) {
+                    docTitle.value = data.title;
+                }
+            }
+
+            if (blocksChanged) {
+                const activeEl = document.activeElement;
+                const activeBlockEl = activeEl ? activeEl.closest(".notion-block") : null;
+                const activeBlockId = activeBlockEl ? activeBlockEl.dataset.id : null;
+
+                documentState.blocks = data.blocks || [];
+                renderBlocks();
+
+                if (activeBlockId) {
+                    const elToFocus = container.querySelector(`[data-id="${activeBlockId}"] .block-content`);
+                    if (elToFocus) {
+                        elToFocus.focus();
+                    }
+                }
+            }
+
+            saveToStorage(false);
+
+            syncStatus.textContent = "Синхронізовано з іншим пристроєм о " + new Date().toLocaleTimeString();
+            syncStatus.className = "badge bg-info-subtle text-info border border-info-subtle px-2 py-1 small";
+            setTimeout(function () {
+                if (hubConnection && hubConnection.state === signalR.HubConnectionState.Connected) {
+                    syncStatus.textContent = "В мережі (Синхронізація активна)";
+                    syncStatus.className = "badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small";
+                }
+            }, 2500);
+        } catch (e) {
+            console.error(e);
+        }
+    });
+
+    hubConnection.onreconnecting(function () {
+        syncStatus.textContent = "Перепідключення...";
+        syncStatus.className = "badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 small";
+    });
+
+    hubConnection.onreconnected(function () {
+        syncStatus.textContent = "В мережі (Синхронізація активна)";
+        syncStatus.className = "badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small";
+    });
+
+    hubConnection.onclose(function () {
+        syncStatus.textContent = "Офлайн (локально)";
+        syncStatus.className = "badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 small";
+    });
+
+    hubConnection.start()
+        .then(function () {
+            syncStatus.textContent = "В мережі (Синхронізація активна)";
+            syncStatus.className = "badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small";
+
+            hubConnection.invoke("GetLatestDocument")
+                .then(function (docJson) {
+                    if (docJson) {
+                        try {
+                            const data = JSON.parse(docJson);
+                            if (data && data.blocks && data.blocks.length > 0) {
+                                documentState.title = data.title || documentState.title;
+                                documentState.blocks = data.blocks;
+                                docTitle.value = documentState.title;
+                                renderBlocks();
+                                saveToStorage(false);
+                            }
+                        } catch (e) { }
+                    }
+                })
+                .catch(function (err) {
+                    console.error(err);
+                });
+        })
+        .catch(function (err) {
+            syncStatus.textContent = "Офлайн (локально)";
+            syncStatus.className = "badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 small";
+        });
 });
 </script>
 }
