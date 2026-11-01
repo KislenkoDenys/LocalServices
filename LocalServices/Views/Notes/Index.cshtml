@@ -83,6 +83,42 @@
     .todo-checkbox { cursor: pointer; width: 1.15rem; height: 1.15rem; flex-shrink: 0; margin-top: 3px !important; }
     .todo-done { text-decoration: line-through; color: #6c757d; }
     .dragging { opacity: 0.4; background-color: #e7f5ff !important; border: 1px dashed #339af0 !important; }
+    @@keyframes remoteFlash {
+        0% {
+            background-color: rgba(13, 110, 253, 0.22);
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35);
+        }
+        50% {
+            background-color: rgba(13, 110, 253, 0.10);
+            box-shadow: 0 0 0 1px rgba(13, 110, 253, 0.2);
+        }
+        100% {
+            background-color: transparent;
+            box-shadow: none;
+        }
+    }
+    .remote-highlight {
+        animation: remoteFlash 1.6s ease-out;
+    }
+    .remote-active-presence {
+        border-left: 3px solid #0d6efd !important;
+        background-color: rgba(13, 110, 253, 0.04);
+    }
+    .remote-presence-badge {
+        position: absolute;
+        right: 36px;
+        top: 6px;
+        font-size: 0.7rem;
+        color: #0d6efd;
+        background-color: #e7f1ff;
+        padding: 1px 6px;
+        border-radius: 4px;
+        pointer-events: none;
+        z-index: 2;
+    }
+    .block-sliding {
+        transition: transform 0.35s ease;
+    }
 </style>
 
 @section Scripts {
@@ -130,7 +166,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     let saveTimeout = null;
-    function saveToStorage(broadcast = true) {
+    let pendingBlockId = null;
+
+    function saveToStorage(broadcast = true, targetBlockId = null) {
         documentState.title = docTitle.value;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(documentState));
         
@@ -143,25 +181,30 @@ document.addEventListener("DOMContentLoaded", function () {
                 senderId: clientId,
                 title: documentState.title,
                 blocks: documentState.blocks,
+                changedBlockId: targetBlockId || pendingBlockId,
                 timestamp: Date.now()
             };
             hubConnection.invoke("UpdateDocument", JSON.stringify(payload)).catch(function (err) {
                 console.error(err);
             });
         }
+        pendingBlockId = null;
     }
 
-    function triggerSave() {
+    function triggerSave(blockId = null) {
+        if (blockId) pendingBlockId = blockId;
         saveStatus.textContent = "Збереження...";
         saveStatus.classList.remove("bg-success-subtle", "text-success", "border-success-subtle");
         saveStatus.classList.add("bg-secondary-subtle", "text-secondary", "border-secondary-subtle");
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(function () {
-            saveToStorage(true);
+            saveToStorage(true, pendingBlockId);
         }, 250);
     }
 
-    docTitle.addEventListener("input", triggerSave);
+    docTitle.addEventListener("input", function () {
+        triggerSave(null);
+    });
 
     function createBlockElement(block) {
         const div = document.createElement("div");
@@ -189,8 +232,8 @@ document.addEventListener("DOMContentLoaded", function () {
         `;
         select.addEventListener("change", function () {
             block.type = this.value;
-            renderBlocks();
-            triggerSave();
+            renderBlocks(true, block.id);
+            triggerSave(block.id);
             setTimeout(() => {
                 const el = container.querySelector(`[data-id="${block.id}"] .block-content`);
                 if (el) el.focus();
@@ -210,7 +253,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 block.checked = this.checked;
                 if (this.checked) contentEl.classList.add("todo-done");
                 else contentEl.classList.remove("todo-done");
-                triggerSave();
+                triggerSave(block.id);
             });
             contentContainer.appendChild(checkbox);
         }
@@ -226,9 +269,21 @@ document.addEventListener("DOMContentLoaded", function () {
             contentEl.classList.add("todo-done");
         }
 
+        contentEl.addEventListener("focus", function () {
+            if (hubConnection && hubConnection.state === signalR.HubConnectionState.Connected) {
+                hubConnection.invoke("BroadcastAction", "focus", block.id, clientId).catch(() => {});
+            }
+        });
+
+        contentEl.addEventListener("blur", function () {
+            if (hubConnection && hubConnection.state === signalR.HubConnectionState.Connected) {
+                hubConnection.invoke("BroadcastAction", "blur", block.id, clientId).catch(() => {});
+            }
+        });
+
         contentEl.addEventListener("input", function () {
             block.content = this.innerText;
-            triggerSave();
+            triggerSave(block.id);
         });
 
         contentEl.addEventListener("keydown", function (e) {
@@ -293,11 +348,47 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function renderBlocks() {
+    function renderBlocks(animated = true, highlightId = null) {
+        let oldPositions = new Map();
+        if (animated && container.children.length > 0) {
+            Array.from(container.children).forEach(child => {
+                if (child.dataset && child.dataset.id) {
+                    oldPositions.set(child.dataset.id, child.getBoundingClientRect().top);
+                }
+            });
+        }
+
         container.innerHTML = "";
         documentState.blocks.forEach(block => {
-            container.appendChild(createBlockElement(block));
+            const el = createBlockElement(block);
+            container.appendChild(el);
+            if (highlightId && block.id === highlightId) {
+                el.classList.add("remote-highlight");
+            }
         });
+
+        if (animated && oldPositions.size > 0) {
+            Array.from(container.children).forEach(child => {
+                const id = child.dataset.id;
+                const oldTop = oldPositions.get(id);
+                if (oldTop !== undefined) {
+                    const newTop = child.getBoundingClientRect().top;
+                    const delta = oldTop - newTop;
+                    if (Math.abs(delta) > 2) {
+                        child.style.transform = `translateY(${delta}px)`;
+                        child.style.transition = "none";
+                        requestAnimationFrame(() => {
+                            child.classList.add("block-sliding");
+                            child.style.transform = "";
+                            setTimeout(() => {
+                                child.classList.remove("block-sliding");
+                                child.style.transition = "";
+                            }, 360);
+                        });
+                    }
+                }
+            });
+        }
     }
 
     function addNewBlockAfter(afterId, type = "paragraph") {
@@ -312,8 +403,8 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
             documentState.blocks.push(newBlock);
         }
-        renderBlocks();
-        triggerSave();
+        renderBlocks(true, newBlock.id);
+        triggerSave(newBlock.id);
 
         setTimeout(() => {
             const el = container.querySelector(`[data-id="${newBlock.id}"] .block-content`);
@@ -324,13 +415,13 @@ document.addEventListener("DOMContentLoaded", function () {
     function deleteBlock(id) {
         if (documentState.blocks.length <= 1) {
             documentState.blocks[0].content = "";
-            renderBlocks();
+            renderBlocks(true);
             triggerSave();
             return;
         }
         const idx = documentState.blocks.findIndex(b => b.id === id);
         documentState.blocks = documentState.blocks.filter(b => b.id !== id);
-        renderBlocks();
+        renderBlocks(true);
         triggerSave();
 
         setTimeout(() => {
@@ -408,6 +499,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (document.activeElement !== docTitle) {
                     docTitle.value = data.title;
                 }
+                docTitle.classList.remove("remote-highlight");
+                void docTitle.offsetWidth;
+                docTitle.classList.add("remote-highlight");
             }
 
             if (blocksChanged) {
@@ -416,13 +510,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 const activeBlockId = activeBlockEl ? activeBlockEl.dataset.id : null;
 
                 documentState.blocks = data.blocks || [];
-                renderBlocks();
+                renderBlocks(true, data.changedBlockId);
 
                 if (activeBlockId) {
                     const elToFocus = container.querySelector(`[data-id="${activeBlockId}"] .block-content`);
                     if (elToFocus) {
                         elToFocus.focus();
                     }
+                }
+            } else if (data.changedBlockId) {
+                const el = container.querySelector(`[data-id="${data.changedBlockId}"]`);
+                if (el) {
+                    el.classList.remove("remote-highlight");
+                    void el.offsetWidth;
+                    el.classList.add("remote-highlight");
                 }
             }
 
@@ -438,6 +539,28 @@ document.addEventListener("DOMContentLoaded", function () {
             }, 2500);
         } catch (e) {
             console.error(e);
+        }
+    });
+
+    hubConnection.on("ReceiveAction", function (actionType, blockId, senderId) {
+        if (!blockId || senderId === clientId) return;
+
+        const blockEl = container.querySelector(`[data-id="${blockId}"]`);
+        if (!blockEl) return;
+
+        if (actionType === "focus") {
+            blockEl.classList.add("remote-active-presence");
+            let badge = blockEl.querySelector(".remote-presence-badge");
+            if (!badge) {
+                badge = document.createElement("span");
+                badge.className = "remote-presence-badge";
+                badge.textContent = "Редагується віддалено...";
+                blockEl.appendChild(badge);
+            }
+        } else if (actionType === "blur") {
+            blockEl.classList.remove("remote-active-presence");
+            const badge = blockEl.querySelector(".remote-presence-badge");
+            if (badge) badge.remove();
         }
     });
 

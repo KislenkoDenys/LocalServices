@@ -70,5 +70,24 @@ public class NotesHubTests
             c => c.SendCoreAsync("ReceiveDocumentUpdate", It.Is<object[]>(o => (string)o[0] == testDoc), default),
             Times.Once);
     }
+
+    [Fact]
+    public async Task BroadcastAction_SendsActionToOthers()
+    {
+        var hub = new NotesHub();
+        var mockClients = new Mock<IHubCallerClients>();
+        var mockClientProxy = new Mock<IClientProxy>();
+        mockClients.Setup(c => c.Others).Returns(mockClientProxy.Object);
+        hub.Clients = mockClients.Object;
+
+        await hub.BroadcastAction("focus", "block_42", "User 1");
+
+        mockClientProxy.Verify(
+            c => c.SendCoreAsync("ReceiveAction", It.Is<object[]>(o => 
+                (string)o[0] == "focus" && 
+                (string)o[1] == "block_42" && 
+                (string)o[2] == "User 1"), default),
+            Times.Once);
+    }
 }
 

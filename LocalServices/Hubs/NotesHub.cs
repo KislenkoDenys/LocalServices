@@ -17,6 +17,11 @@ public class NotesHub : Hub
         await Clients.Others.SendAsync("ReceiveDocumentUpdate", documentJson);
     }
 
+    public async Task BroadcastAction(string actionType, string? blockId, string? payload)
+    {
+        await Clients.Others.SendAsync("ReceiveAction", actionType, blockId, payload);
+    }
+
     public Task<string?> GetLatestDocument()
     {
         lock (_syncLock)
