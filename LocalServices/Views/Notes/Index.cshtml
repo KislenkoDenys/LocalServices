@@ -137,6 +137,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const syncStatus = document.getElementById("syncStatus");
 
     const clientId = "client_" + Math.random().toString(36).substring(2, 9);
+    let lastDraggedId = null;
 
     let documentState = {
         title: "План розвитку закладу",
@@ -331,6 +332,7 @@ document.addEventListener("DOMContentLoaded", function () {
         div.appendChild(btnDelete);
 
         div.addEventListener("dragstart", function (e) {
+            lastDraggedId = block.id;
             div.classList.add("dragging");
             e.dataTransfer.setData("text/plain", block.id);
         });
@@ -365,46 +367,90 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function renderBlocks(animated = true, highlightId = null) {
-        let oldPositions = new Map();
-        if (animated && container.children.length > 0) {
-            Array.from(container.children).forEach(child => {
-                if (child.dataset && child.dataset.id) {
-                    oldPositions.set(child.dataset.id, child.getBoundingClientRect().top);
-                }
-            });
-        }
-
+    function renderBlocks() {
         container.innerHTML = "";
         documentState.blocks.forEach(block => {
-            const el = createBlockElement(block);
-            container.appendChild(el);
-            if (highlightId && block.id === highlightId) {
-                el.classList.add("remote-highlight");
+            container.appendChild(createBlockElement(block));
+        });
+    }
+
+    function reorderBlocksAnimated(newBlocks, changedBlockId) {
+        const oldPositions = new Map();
+        Array.from(container.children).forEach(child => {
+            if (child.dataset && child.dataset.id) {
+                oldPositions.set(child.dataset.id, child.getBoundingClientRect().top);
             }
         });
 
-        if (animated && oldPositions.size > 0) {
-            Array.from(container.children).forEach(child => {
-                const id = child.dataset.id;
-                const oldTop = oldPositions.get(id);
-                if (oldTop !== undefined) {
-                    const newTop = child.getBoundingClientRect().top;
-                    const delta = oldTop - newTop;
-                    if (Math.abs(delta) > 2) {
-                        child.style.transform = `translateY(${delta}px)`;
-                        child.style.transition = "none";
-                        requestAnimationFrame(() => {
-                            child.classList.add("block-sliding");
-                            child.style.transform = "";
-                            setTimeout(() => {
-                                child.classList.remove("block-sliding");
-                                child.style.transition = "";
-                            }, 360);
-                        });
-                    }
+        newBlocks.forEach(block => {
+            let el = container.querySelector(`[data-id="${block.id}"]`);
+            if (!el) {
+                el = createBlockElement(block);
+            } else {
+                const contentEl = el.querySelector(".block-content");
+                if (contentEl && document.activeElement !== contentEl) {
+                    contentEl.innerText = block.content || "";
+                }
+                const select = el.querySelector(".form-select");
+                if (select && select.value !== block.type) {
+                    select.value = block.type;
+                    applyBlockTypeStyles(contentEl, block);
+                }
+                const checkbox = el.querySelector(".todo-checkbox");
+                if (checkbox && checkbox.checked !== !!block.checked) {
+                    checkbox.checked = !!block.checked;
+                    if (block.checked) contentEl.classList.add("todo-done");
+                    else contentEl.classList.remove("todo-done");
+                }
+            }
+            container.appendChild(el);
+        });
+
+        const newIdsSet = new Set(newBlocks.map(b => b.id));
+        Array.from(container.children).forEach(child => {
+            if (!newIdsSet.has(child.dataset.id)) {
+                child.remove();
+            }
+        });
+
+        const animatingElements = [];
+        Array.from(container.children).forEach(child => {
+            const id = child.dataset.id;
+            const oldTop = oldPositions.get(id);
+            if (oldTop !== undefined) {
+                const newTop = child.getBoundingClientRect().top;
+                const delta = oldTop - newTop;
+                if (Math.abs(delta) > 2) {
+                    child.style.transition = "none";
+                    child.style.transform = `translateY(${delta}px)`;
+                    animatingElements.push(child);
+                }
+            }
+        });
+
+        void container.offsetHeight;
+
+        requestAnimationFrame(() => {
+            animatingElements.forEach(child => {
+                child.style.transition = "transform 0.45s cubic-bezier(0.2, 0, 0, 1)";
+                child.style.transform = "translateY(0px)";
+                if (child.dataset.id === changedBlockId) {
+                    child.style.boxShadow = "0 6px 18px rgba(13, 110, 253, 0.25)";
                 }
             });
+
+            setTimeout(() => {
+                animatingElements.forEach(child => {
+                    child.style.transition = "";
+                    child.style.transform = "";
+                    child.style.boxShadow = "";
+                });
+            }, 460);
+        });
+
+        if (changedBlockId) {
+            const el = container.querySelector(`[data-id="${changedBlockId}"]`);
+            if (el) flashHighlight(el);
         }
     }
 
@@ -420,7 +466,7 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
             documentState.blocks.push(newBlock);
         }
-        renderBlocks(true, newBlock.id);
+        reorderBlocksAnimated(documentState.blocks, newBlock.id);
         triggerSave(newBlock.id);
 
         setTimeout(() => {
@@ -432,13 +478,13 @@ document.addEventListener("DOMContentLoaded", function () {
     function deleteBlock(id) {
         if (documentState.blocks.length <= 1) {
             documentState.blocks[0].content = "";
-            renderBlocks(true);
+            renderBlocks();
             triggerSave();
             return;
         }
         const idx = documentState.blocks.findIndex(b => b.id === id);
         documentState.blocks = documentState.blocks.filter(b => b.id !== id);
-        renderBlocks(true);
+        reorderBlocksAnimated(documentState.blocks, null);
         triggerSave();
 
         setTimeout(() => {
@@ -460,7 +506,8 @@ document.addEventListener("DOMContentLoaded", function () {
             if (item) newBlocks.push(item);
         });
         documentState.blocks = newBlocks;
-        triggerSave();
+        triggerSave(lastDraggedId);
+        lastDraggedId = null;
     }
 
     container.addEventListener("dragover", function (e) {
@@ -573,7 +620,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     const activeBlockId = activeBlockEl ? activeBlockEl.dataset.id : null;
 
                     documentState.blocks = remoteBlocks;
-                    renderBlocks(true, data.changedBlockId);
+                    reorderBlocksAnimated(remoteBlocks, data.changedBlockId);
 
                     if (activeBlockId) {
                         const elToFocus = container.querySelector(`[data-id="${activeBlockId}"] .block-content`);
