@@ -85,39 +85,44 @@
     .dragging { opacity: 0.4; background-color: #e7f5ff !important; border: 1px dashed #339af0 !important; }
     @@keyframes remoteFlash {
         0% {
-            background-color: rgba(13, 110, 253, 0.22);
-            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35);
+            background-color: #fff3cd !important;
+            border-color: #ffc107 !important;
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.45) !important;
         }
         50% {
-            background-color: rgba(13, 110, 253, 0.10);
-            box-shadow: 0 0 0 1px rgba(13, 110, 253, 0.2);
+            background-color: #fff9db !important;
+            border-color: #ffe066 !important;
+            box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.25) !important;
         }
         100% {
             background-color: transparent;
+            border-color: transparent;
             box-shadow: none;
         }
     }
     .remote-highlight {
-        animation: remoteFlash 1.6s ease-out;
+        animation: remoteFlash 1.8s ease-out !important;
     }
     .remote-active-presence {
-        border-left: 3px solid #0d6efd !important;
-        background-color: rgba(13, 110, 253, 0.04);
+        border-left: 4px solid #0d6efd !important;
+        background-color: #f0f7ff !important;
     }
     .remote-presence-badge {
         position: absolute;
         right: 36px;
         top: 6px;
-        font-size: 0.7rem;
+        font-size: 0.72rem;
+        font-weight: 600;
         color: #0d6efd;
-        background-color: #e7f1ff;
-        padding: 1px 6px;
-        border-radius: 4px;
+        background-color: #cfe2ff;
+        border: 1px solid #b6d4fe;
+        padding: 2px 8px;
+        border-radius: 12px;
         pointer-events: none;
-        z-index: 2;
+        z-index: 5;
     }
     .block-sliding {
-        transition: transform 0.35s ease;
+        transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1) !important;
     }
 </style>
 
@@ -204,6 +209,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     docTitle.addEventListener("input", function () {
         triggerSave(null);
+    });
+
+    docTitle.addEventListener("focus", function () {
+        if (hubConnection && hubConnection.state === signalR.HubConnectionState.Connected) {
+            hubConnection.invoke("BroadcastAction", "focus", "docTitle", clientId).catch(() => {});
+        }
+    });
+
+    docTitle.addEventListener("blur", function () {
+        if (hubConnection && hubConnection.state === signalR.HubConnectionState.Connected) {
+            hubConnection.invoke("BroadcastAction", "blur", "docTitle", clientId).catch(() => {});
+        }
     });
 
     function createBlockElement(block) {
@@ -483,6 +500,16 @@ document.addEventListener("DOMContentLoaded", function () {
         .withAutomaticReconnect()
         .build();
 
+    function flashHighlight(el) {
+        if (!el) return;
+        el.classList.remove("remote-highlight");
+        void el.offsetWidth;
+        el.classList.add("remote-highlight");
+        setTimeout(function () {
+            el.classList.remove("remote-highlight");
+        }, 1800);
+    }
+
     hubConnection.on("ReceiveDocumentUpdate", function (rawJson) {
         try {
             const data = JSON.parse(rawJson);
@@ -499,31 +526,66 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (document.activeElement !== docTitle) {
                     docTitle.value = data.title;
                 }
-                docTitle.classList.remove("remote-highlight");
-                void docTitle.offsetWidth;
-                docTitle.classList.add("remote-highlight");
+                flashHighlight(docTitle);
             }
 
             if (blocksChanged) {
-                const activeEl = document.activeElement;
-                const activeBlockEl = activeEl ? activeEl.closest(".notion-block") : null;
-                const activeBlockId = activeBlockEl ? activeBlockEl.dataset.id : null;
+                const remoteBlocks = data.blocks || [];
+                const currentDomBlocks = Array.from(container.children);
+                const currentIds = currentDomBlocks.map(el => el.dataset.id);
+                const newIds = remoteBlocks.map(b => b.id);
 
-                documentState.blocks = data.blocks || [];
-                renderBlocks(true, data.changedBlockId);
+                const structureChanged = JSON.stringify(currentIds) !== JSON.stringify(newIds);
 
-                if (activeBlockId) {
-                    const elToFocus = container.querySelector(`[data-id="${activeBlockId}"] .block-content`);
-                    if (elToFocus) {
-                        elToFocus.focus();
+                if (!structureChanged) {
+                    remoteBlocks.forEach(block => {
+                        const el = container.querySelector(`[data-id="${block.id}"]`);
+                        if (!el) return;
+
+                        const contentEl = el.querySelector(".block-content");
+                        const select = el.querySelector(".form-select");
+                        const checkbox = el.querySelector(".todo-checkbox");
+
+                        if (contentEl && contentEl.innerText !== (block.content || "")) {
+                            if (document.activeElement !== contentEl) {
+                                contentEl.innerText = block.content || "";
+                            }
+                        }
+
+                        if (select && select.value !== block.type) {
+                            select.value = block.type;
+                            applyBlockTypeStyles(contentEl, block);
+                        }
+
+                        if (checkbox && checkbox.checked !== !!block.checked) {
+                            checkbox.checked = !!block.checked;
+                            if (block.checked) contentEl.classList.add("todo-done");
+                            else contentEl.classList.remove("todo-done");
+                        }
+
+                        if (block.id === data.changedBlockId) {
+                            flashHighlight(el);
+                        }
+                    });
+                } else {
+                    const activeEl = document.activeElement;
+                    const activeBlockEl = activeEl ? activeEl.closest(".notion-block") : null;
+                    const activeBlockId = activeBlockEl ? activeBlockEl.dataset.id : null;
+
+                    documentState.blocks = remoteBlocks;
+                    renderBlocks(true, data.changedBlockId);
+
+                    if (activeBlockId) {
+                        const elToFocus = container.querySelector(`[data-id="${activeBlockId}"] .block-content`);
+                        if (elToFocus) {
+                            elToFocus.focus();
+                        }
                     }
                 }
             } else if (data.changedBlockId) {
                 const el = container.querySelector(`[data-id="${data.changedBlockId}"]`);
                 if (el) {
-                    el.classList.remove("remote-highlight");
-                    void el.offsetWidth;
-                    el.classList.add("remote-highlight");
+                    flashHighlight(el);
                 }
             }
 
@@ -544,6 +606,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     hubConnection.on("ReceiveAction", function (actionType, blockId, senderId) {
         if (!blockId || senderId === clientId) return;
+
+        if (blockId === "docTitle") {
+            if (actionType === "focus") {
+                docTitle.style.borderBottom = "2px solid #0d6efd";
+            } else {
+                docTitle.style.borderBottom = "";
+            }
+            return;
+        }
 
         const blockEl = container.querySelector(`[data-id="${blockId}"]`);
         if (!blockEl) return;
