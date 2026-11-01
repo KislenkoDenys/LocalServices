@@ -17,18 +17,14 @@
         </div>
     </div>
 
-    <!-- Заголовок документа -->
     <div class="mb-4">
         <input type="text" id="docTitle" class="form-control form-control-lg fw-bold border-0 px-2 py-1 shadow-none" 
                placeholder="Заголовок документа..." style="font-size: 1.8rem; background: transparent;" />
     </div>
 
-    <!-- Контейнер блоків Notion-стилю -->
     <div id="blocksContainer" class="d-flex flex-column gap-2 mb-4">
-        <!-- Блоки генеруються динамічно через JS -->
     </div>
 
-    <!-- Кнопка додавання нового блоку -->
     <div class="pt-2 border-top">
         <button id="btnAddBlock" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
             + Додати блок
@@ -152,13 +148,11 @@ document.addEventListener("DOMContentLoaded", function () {
         div.setAttribute("draggable", "true");
         div.dataset.id = block.id;
 
-        // Ручка перетягування (Drag-n-Drop F3)
         const handle = document.createElement("span");
         handle.className = "notion-handle mt-1";
         handle.innerHTML = "⋮⋮";
         handle.title = "Перетягніть для сортування";
 
-        // Селектор типу блоку
         const select = document.createElement("select");
         select.className = "form-select form-select-sm border-0 bg-transparent text-muted p-0 mt-1";
         select.style.width = "75px";
@@ -182,7 +176,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }, 20);
         });
 
-        // Контент блоку
         const contentContainer = document.createElement("div");
         contentContainer.className = "flex-grow-1 d-flex align-items-start gap-2";
 
@@ -229,7 +222,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         contentContainer.appendChild(contentEl);
 
-        // Кнопка видалення
         const btnDelete = document.createElement("button");
         btnDelete.className = "btn btn-link text-danger p-0 mt-1 text-decoration-none";
         btnDelete.innerHTML = "×";
@@ -245,7 +237,6 @@ document.addEventListener("DOMContentLoaded", function () {
         div.appendChild(contentContainer);
         div.appendChild(btnDelete);
 
-        // Drag and Drop події (F3)
         div.addEventListener("dragstart", function (e) {
             div.classList.add("dragging");
             e.dataTransfer.setData("text/plain", block.id);
@@ -303,7 +294,6 @@ document.addEventListener("DOMContentLoaded", function () {
         renderBlocks();
         triggerSave();
 
-        // Фокус на новому блоці
         setTimeout(() => {
             const el = container.querySelector(`[data-id="${newBlock.id}"] .block-content`);
             if (el) el.focus();
@@ -322,7 +312,6 @@ document.addEventListener("DOMContentLoaded", function () {
         renderBlocks();
         triggerSave();
 
-        // Фокус на сусідньому блоці
         setTimeout(() => {
             const targetIdx = Math.max(0, idx - 1);
             const nextBlock = documentState.blocks[targetIdx];
@@ -345,7 +334,6 @@ document.addEventListener("DOMContentLoaded", function () {
         triggerSave();
     }
 
-    // Drag-over для сортування контейнера (F3 Drag & Drop)
     container.addEventListener("dragover", function (e) {
         e.preventDefault();
         const draggingEl = container.querySelector(".dragging");
@@ -376,7 +364,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Початкове завантаження
     loadFromStorage();
 });
 </script>

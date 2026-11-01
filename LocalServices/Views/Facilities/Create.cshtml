@@ -81,7 +81,27 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-medium">Фотографія закладу</label>
-                            <input asp-for="ImageFile" type="file" class="form-control" accept="image/*"/>
+                            
+                            <div id="fileDropZone" class="p-3 text-center rounded-3 mb-2" style="border: 2px dashed #ced4da; cursor: pointer; transition: all 0.2s ease; background-color: #fbfbfb;">
+                                <div id="dropZonePrompt" class="py-2">
+                                    <div class="mb-1" style="font-size: 1.6rem; color: #6c757d;">📁</div>
+                                    <div class="fw-medium text-dark small">Перетягніть фото сюди або <span class="text-primary text-decoration-underline">оберіть файл</span></div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">Підтримуються JPG, PNG, WEBP (до 5 МБ)</div>
+                                </div>
+                                <div id="filePreviewContainer" class="d-none py-1">
+                                    <div class="d-flex align-items-center gap-3 text-start">
+                                        <img id="imagePreview" src="" alt="Прев'ю" style="width: 70px; height: 70px; object-fit: cover; border-radius: 0.375rem; border: 1px solid #dee2e6;" />
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <div id="fileNameDisplay" class="fw-medium text-dark text-truncate small"></div>
+                                            <div id="fileMetaDisplay" class="text-muted" style="font-size: 0.75rem;"></div>
+                                            <button type="button" id="btnRemoveFile" class="btn btn-link text-danger p-0 mt-1" style="font-size: 0.75rem; text-decoration: none;">Видалити фото</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="fileErrorAlert" class="alert alert-danger py-1 px-2 small d-none mb-2" role="alert"></div>
+
+                            <input asp-for="ImageFile" id="facilityImageInput" type="file" class="d-none" accept="image/*"/>
                             <span asp-validation-for="ImageFile" class="text-danger"></span>
                         </div>
                     </div>
@@ -133,7 +153,6 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/uk.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // F2: AJAX Autocomplete через Select2
             $('#categorySelect').select2({
                 theme: 'bootstrap-5',
                 language: {
@@ -283,6 +302,97 @@
                     btnGeocode.disabled = false;
                     btnGeocode.textContent = "Знайти за адресою";
                 }
+            });
+
+            const dropZone = document.getElementById("fileDropZone");
+            const fileInput = document.getElementById("facilityImageInput");
+            const promptBox = document.getElementById("dropZonePrompt");
+            const previewBox = document.getElementById("filePreviewContainer");
+            const previewImg = document.getElementById("imagePreview");
+            const nameDisplay = document.getElementById("fileNameDisplay");
+            const metaDisplay = document.getElementById("fileMetaDisplay");
+            const btnRemove = document.getElementById("btnRemoveFile");
+            const errorAlert = document.getElementById("fileErrorAlert");
+
+            function showFileError(msg) {
+                errorAlert.textContent = msg;
+                errorAlert.classList.remove("d-none");
+            }
+
+            function clearFileError() {
+                errorAlert.textContent = "";
+                errorAlert.classList.add("d-none");
+            }
+
+            function handleFile(file) {
+                clearFileError();
+                if (!file) return;
+
+                if (!file.type.startsWith("image/")) {
+                    showFileError("Обраний файл не є зображенням. Підтримуються лише JPG, PNG, WEBP.");
+                    return;
+                }
+
+                const maxSize = 5 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    showFileError(`Розмір файлу (${(file.size / (1024 * 1024)).toFixed(1)} МБ) перевищує допустимий ліміт 5 МБ.`);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    previewImg.src = e.target.result;
+                    nameDisplay.textContent = file.name;
+                    metaDisplay.textContent = `${(file.size / 1024).toFixed(1)} КБ • ${file.type}`;
+                    promptBox.classList.add("d-none");
+                    previewBox.classList.remove("d-none");
+                };
+                reader.readAsDataURL(file);
+
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+            }
+
+            dropZone.addEventListener("click", () => fileInput.click());
+
+            fileInput.addEventListener("change", function () {
+                if (this.files && this.files[0]) {
+                    handleFile(this.files[0]);
+                }
+            });
+
+            ["dragenter", "dragover"].forEach(evtName => {
+                dropZone.addEventListener(evtName, function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.style.borderColor = "#0d6efd";
+                    dropZone.style.backgroundColor = "#e7f1ff";
+                });
+            });
+
+            ["dragleave", "drop"].forEach(evtName => {
+                dropZone.addEventListener(evtName, function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.style.borderColor = "#ced4da";
+                    dropZone.style.backgroundColor = "#fbfbfb";
+                });
+            });
+
+            dropZone.addEventListener("drop", function (e) {
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            btnRemove.addEventListener("click", function (e) {
+                e.stopPropagation();
+                fileInput.value = "";
+                previewImg.src = "";
+                promptBox.classList.remove("d-none");
+                previewBox.classList.add("d-none");
+                clearFileError();
             });
         });
     </script>
