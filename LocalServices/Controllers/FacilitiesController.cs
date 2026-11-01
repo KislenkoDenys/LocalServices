@@ -13,6 +13,7 @@ public class FacilitiesController : Controller
     private readonly IWebHostEnvironment _hostEnvironment;
     private readonly IMemoryCache? _cache;
     private readonly ITelegramNotificationService? _telegramService;
+    private readonly IPdfExportService? _pdfExportService;
     private readonly IBlobStorageService? _blobStorageService;
 
     public FacilitiesController(
@@ -20,13 +21,15 @@ public class FacilitiesController : Controller
         IWebHostEnvironment hostEnvironment,
         IMemoryCache? cache = null,
         ITelegramNotificationService? telegramService = null,
-        IBlobStorageService? blobStorageService = null)
+        IBlobStorageService? blobStorageService = null,
+        IPdfExportService? pdfExportService = null)
     {
         _context = context;
         _hostEnvironment = hostEnvironment;
         _cache = cache;
         _telegramService = telegramService;
         _blobStorageService = blobStorageService;
+        _pdfExportService = pdfExportService;
     }
 
     // GET: FACILITYS
@@ -56,6 +59,29 @@ public class FacilitiesController : Controller
         }
 
         return View(facility);
+    }
+
+    public async Task<IActionResult> ExportPdf(int? id)
+    {
+        if (id == null)
+        {
+            return NotFound();
+        }
+
+        var facility = await _context.Facilities
+            .Include(f => f.Category)
+            .Include(f => f.Services)
+            .FirstOrDefaultAsync(m => m.Id == id);
+
+        if (facility == null)
+        {
+            return NotFound();
+        }
+
+        var pdfService = _pdfExportService ?? new PdfExportService();
+        var pdfBytes = pdfService.GenerateFacilityPriceListPdf(facility);
+        var safeFileName = $"PriceList_{facility.Name.Trim().Replace(" ", "_")}.pdf";
+        return File(pdfBytes, "application/pdf", safeFileName);
     }
 
     // GET: FACILITYS/Create

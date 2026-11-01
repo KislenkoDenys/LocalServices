@@ -39,6 +39,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<LocalServices.Services.ITelegramNotificationService, LocalServices.Services.TelegramNotificationService>();
 
 builder.Services.AddScoped<LocalServices.Services.IBlobStorageService, LocalServices.Services.CloudinaryBlobStorageService>();
+builder.Services.AddScoped<LocalServices.Services.IPdfExportService, LocalServices.Services.PdfExportService>();
 
 builder.Services.AddControllersWithViews(options =>
 {
